@@ -1,0 +1,64 @@
+<div x-show="showExplanation" class="absolute bottom-0 left-0 w-full flex justify-center z-50 pointer-events-none"
+     x-transition:enter="transition ease-out duration-500" x-transition:enter-start="translate-y-full opacity-0" x-transition:enter-end="translate-y-0 opacity-100"
+     x-transition:leave="transition ease-in duration-300" x-transition:leave-start="translate-y-0 opacity-100" x-transition:leave-end="translate-y-full opacity-0">
+    <div class="pointer-events-auto w-full max-w-3xl bg-white/95 dark:bg-slate-800/95 backdrop-blur-3xl border border-white/20 shadow-2xl rounded-t-[3rem] p-10 pb-16 relative">
+        <button @click="showExplanation = false" class="absolute top-6 right-6 p-3 bg-gray-100 dark:bg-white/10 rounded-full"><svg class="w-5 h-5 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <div class="flex items-center gap-4 mb-6">
+            <div class="w-12 h-12 bg-red-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-red-500/30"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
+            <h3 class="text-2xl font-black" x-text="t('diagnosis')">Diagnosis</h3>
+        </div>
+        <div class="prose prose-lg max-w-none text-gray-600 dark:text-gray-300 math-content bg-red-50 dark:bg-red-900/20 p-6 rounded-2xl border border-red-100 dark:border-red-500/20">
+            <p class="font-bold mb-2"><span x-text="t('correct_label')">Correct:</span> <span class="text-green-600 text-xl" x-text="feedback.correct_id"></span></p>
+            <div x-html="feedback.explanation"></div>
+        </div>
+        <div class="mt-8 flex gap-4">
+            <button @click="showExplanation = false; toggleAI()" class="flex-1 py-4 bg-blue-500/10 text-blue-500 rounded-2xl font-bold hover:bg-blue-500/20 transition-colors text-lg" x-text="t('ask_ai')">Ask AI</button>
+            <button @click="showExplanation = false; loadNext()" class="flex-1 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-bold transition-colors text-lg shadow-lg" x-text="t('next')">Next</button>
+        </div>
+    </div>
+</div>
+
+<div x-show="showAddToBookModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm" x-transition.opacity style="display: none;">
+    <div @click.away="showAddToBookModal = false" class="glass-panel p-6 w-full max-w-sm shadow-2xl bg-white dark:bg-slate-800 transform transition-all scale-100">
+        <h3 class="font-bold text-lg mb-4" x-text="t('add_to_notebook')">Add to Notebook</h3>
+        <div class="max-h-60 overflow-y-auto space-y-2 mb-4 pr-2">
+            <template x-for="book in notebooksList" :key="book.id">
+                <div @click="addToBook(book.id)" class="p-3 rounded-xl bg-gray-50 dark:bg-white/5 hover:bg-blue-500 hover:text-white cursor-pointer font-medium text-sm transition-colors" x-text="book.name"></div>
+            </template>
+        </div>
+        <button @click="showAddToBookModal = false" class="w-full py-2 bg-gray-100 dark:bg-white/10 rounded-lg font-bold opacity-70 hover:opacity-100" x-text="t('cancel')">Cancel</button>
+    </div>
+</div>
+
+<div x-show="showCreateModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm" x-transition.opacity style="display: none;">
+    <div @click.away="showCreateModal = false" class="glass-panel p-6 w-full max-w-sm shadow-2xl bg-white dark:bg-slate-800 transform transition-all scale-100">
+        <h3 class="font-bold text-lg mb-4"><span x-text="t('new_folder_title')">New Folder</span> <span class="opacity-60" x-text="'in ' + bookData.info?.name"></span></h3>
+        
+        <label class="text-xs font-bold opacity-50 uppercase mb-1 block" x-text="t('name_label')">Name</label>
+        <input type="text" x-model="subBookName" class="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent mb-4 focus:ring-2 focus:ring-blue-500 outline-none">
+        
+        <label class="text-xs font-bold opacity-50 uppercase mb-1 block" x-text="t('tags_label')">Custom Tags</label>
+        <input type="text" x-model="subBookTags" class="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent mb-4 focus:ring-2 focus:ring-blue-500 outline-none text-sm" :placeholder="t('tags_placeholder')">
+        
+        <div class="flex gap-2">
+            <button @click="showCreateModal = false" class="flex-1 py-2 bg-gray-100 dark:bg-white/10 rounded-lg font-bold opacity-70 hover:opacity-100 transition-opacity" x-text="t('cancel')">Cancel</button>
+            <button @click="confirmCreateSubBook()" class="flex-1 py-2 bg-blue-500 text-white rounded-lg font-bold hover:bg-blue-600 transition-colors" x-text="t('create')">Create</button>
+        </div>
+    </div>
+</div>
+
+<div x-show="notify.show" 
+     x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0"
+     x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-4"
+     class="fixed bottom-6 left-6 z-[110] glass-panel px-6 py-4 flex items-center gap-4 border-2 shadow-2xl min-w-[240px]"
+     :class="notify.show ? 'toast-border-anim' : 'border-transparent'"
+     style="display: none;">
+     
+    <div class="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-lg">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+    </div>
+    <div>
+        <div class="font-bold text-sm" x-text="notify.title">Notification</div>
+        <div class="text-xs opacity-60" x-text="notify.msg">Action completed</div>
+    </div>
+</div>

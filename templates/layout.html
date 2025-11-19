@@ -5,10 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Physics Pro</title>
     
+    <script>
+        (function() {
+            try {
+                const settings = JSON.parse(localStorage.getItem('appSettings'));
+                if (settings && settings.mode === 'dark') {
+                    document.documentElement.classList.add('dark');
+                }
+            } catch (e) {}
+        })();
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
-            darkMode: 'class', // 启用 class 模式的暗黑模式
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    // [NEW] iOS 风格的弹簧动画曲线，极其丝滑
+                    transitionTimingFunction: {
+                        'spring': 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+                    }
+                }
+            }
         }
     </script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
@@ -20,55 +39,65 @@
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </head>
 
-<body class="h-screen w-screen overflow-hidden antialiased font-sans transition-colors duration-500"
-      :style="settings.bgImage ? `background-image: url('${settings.bgImage}')` : ''"
-      :class="!settings.bgImage ? (settings.mode === 'dark' ? 'bg-slate-900' : 'bg-slate-50') : ''"
+<body class="h-screen w-screen overflow-hidden antialiased font-sans text-slate-900 dark:text-slate-100"
       x-data="globalApp()" x-init="initGlobal()">
 
+    <div class="fixed inset-0 z-[-1] transition-all duration-1000 ease-in-out bg-cover bg-center bg-no-repeat"
+         :style="settings.bgImage ? `background-image: url('${settings.bgImage}')` : ''"
+         :class="!settings.bgImage ? (settings.mode === 'dark' ? 'bg-slate-900' : 'bg-slate-50') : ''">
+    </div>
+
     <div class="fixed inset-0 pointer-events-none z-0 transition-colors duration-500"
-         :class="settings.mode === 'dark' ? 'bg-black/60' : 'bg-white/10'"></div>
+         :class="settings.mode === 'dark' ? 'bg-black/60' : 'bg-white/30'"></div>
 
-    <div class="fixed top-0 left-0 w-full h-1 z-[70]" @mouseenter="barOpen = true"></div>
+    <div class="fixed top-0 left-1/2 -translate-x-1/2 w-2/3 h-6 z-[70] cursor-s-resize" 
+         @mouseenter="barOpen = true"></div>
 
-    <div class="fixed top-0 left-0 w-full z-[60] transition-transform duration-300 ease-out transform"
+    <div class="fixed top-0 left-0 w-full z-[60] transition-transform duration-500 ease-spring transform pointer-events-none"
          :class="barOpen ? 'translate-y-0' : '-translate-y-full'"
          @mouseleave="barOpen = false">
         
-        <div class="mx-auto max-w-5xl mt-4 rounded-2xl px-8 py-4 shadow-2xl flex items-center justify-between glass-panel">
+        <div class="mx-auto max-w-5xl mt-4 rounded-2xl px-10 py-5 shadow-2xl flex items-center justify-between glass-panel pointer-events-auto border border-white/20 backdrop-blur-xl">
             
-            <div class="flex items-center gap-8 text-lg font-medium">
-                <a href="/" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true" class="flex items-center gap-3 hover:opacity-70 transition-opacity">
-                    <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold shadow-lg">P</div>
-                    <span class="font-bold tracking-tight">Physics Pro</span>
+            <div class="flex items-center gap-8 font-medium">
+                <a href="/" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true" class="flex items-center gap-3 hover:opacity-70 transition-opacity group">
+                    <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold shadow-lg group-hover:scale-110 transition-transform ease-spring duration-300">P</div>
+                    <span class="font-bold text-xl tracking-tight">Physics Pro</span>
                 </a>
 
-                <span class="font-mono text-base opacity-70" x-text="timeString"></span>
+                <span class="font-mono text-xl opacity-70 tracking-wider" x-text="timeString"></span>
 
                 <div x-show="pomo.active" class="flex items-center gap-2 text-red-500 dark:text-red-400 animate-pulse">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    <span x-text="pomoString" class="font-mono font-bold"></span>
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span x-text="pomoString" class="font-mono font-bold text-xl"></span>
                 </div>
             </div>
 
             <div class="flex items-center gap-6">
-                <div class="flex items-center gap-3 bg-gray-100 dark:bg-white/10 rounded-full px-4 py-2">
-                    <span class="text-xs font-bold truncate max-w-[100px]" x-text="music.isPlaying ? music.list[music.currentIdx].title : t('playing')"></span>
-                    <button @click="togglePlay()" class="hover:text-blue-500">
-                        <svg x-show="!music.isPlaying" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                        <svg x-show="music.isPlaying" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                <div class="flex items-center gap-3 bg-gray-100/80 dark:bg-white/10 rounded-full px-5 py-2.5 backdrop-blur-sm border border-transparent hover:border-white/20 transition-colors">
+                    <span class="text-sm font-bold truncate max-w-[120px]" x-text="music.isPlaying ? music.list[music.currentIdx].title : t('playing')"></span>
+                    <button @click="togglePlay()" class="hover:text-blue-500 hover:scale-110 transition-transform">
+                        <svg x-show="!music.isPlaying" class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        <svg x-show="music.isPlaying" class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
                     </button>
                 </div>
 
-                <button @click="showSettings = true" class="hover:rotate-90 transition-transform opacity-70 hover:opacity-100">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                <button @click="showSettings = true" class="hover:rotate-90 transition-transform duration-500 opacity-70 hover:opacity-100 p-2">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                 </button>
             </div>
         </div>
     </div>
 
-    <div x-show="showSettings" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm" 
-         x-transition.opacity style="display: none;">
-        <div @click.away="showSettings = false" class="glass-panel w-full max-w-md p-8 shadow-2xl transform transition-all bg-white dark:bg-slate-800">
+    <div x-show="showSettings" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md" 
+         x-transition:enter="transition ease-spring duration-500"
+         x-transition:enter-start="opacity-0 scale-90"
+         x-transition:enter-end="opacity-100 scale-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100 scale-100"
+         x-transition:leave-end="opacity-0 scale-90"
+         style="display: none;">
+        <div @click.away="showSettings = false" class="glass-panel w-full max-w-md p-8 shadow-2xl bg-white dark:bg-slate-800">
             <div class="flex justify-between items-center mb-8 border-b border-gray-200 dark:border-gray-700 pb-4">
                 <h2 class="text-2xl font-bold" x-text="t('settings')">Settings</h2>
                 <button @click="showSettings = false" class="opacity-50 hover:opacity-100"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
@@ -77,12 +106,12 @@
             <div class="mb-8">
                 <label class="block text-xs font-bold opacity-50 uppercase mb-4" x-text="t('appearance')">Appearance</label>
                 <div class="grid grid-cols-2 gap-4 mb-6">
-                    <button @click="setMode('light')" class="p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-all"
+                    <button @click="setMode('light')" class="p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-all duration-300 hover:scale-[1.02]"
                             :class="settings.mode === 'light' ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-600' : 'border-transparent bg-gray-100 dark:bg-white/5'">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
                         <span class="text-sm font-bold">Light</span>
                     </button>
-                    <button @click="setMode('dark')" class="p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-all"
+                    <button @click="setMode('dark')" class="p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-all duration-300 hover:scale-[1.02]"
                             :class="settings.mode === 'dark' ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-600' : 'border-transparent bg-gray-100 dark:bg-white/5'">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
                         <span class="text-sm font-bold">Dark</span>
@@ -90,19 +119,19 @@
                 </div>
 
                 <div class="grid grid-cols-3 gap-3">
-                    <div @click="setBg('')" class="h-16 rounded-lg border-2 cursor-pointer bg-gray-200 dark:bg-slate-700 flex items-center justify-center" :class="settings.bgImage===''?'border-blue-500':'border-transparent'">
+                    <div @click="setBg('')" class="h-16 rounded-lg border-2 cursor-pointer bg-gray-200 dark:bg-slate-700 flex items-center justify-center hover:scale-105 transition-transform duration-300" :class="settings.bgImage===''?'border-blue-500':'border-transparent'">
                         <span class="text-xs font-bold opacity-50">Default</span>
                     </div>
-                    <div @click="setBg('https://images.unsplash.com/photo-1477346611705-65d1883cee1e?auto=format&fit=crop&q=80')" class="h-16 rounded-lg border-2 cursor-pointer bg-cover" :class="settings.bgImage.includes('14773')?'border-blue-500':'border-transparent'" style="background-image: url('https://images.unsplash.com/photo-1477346611705-65d1883cee1e?auto=format&fit=crop&q=80&w=200')"></div>
-                    <div @click="setBg('https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?auto=format&fit=crop&q=80')" class="h-16 rounded-lg border-2 cursor-pointer bg-cover" :class="settings.bgImage.includes('15347')?'border-blue-500':'border-transparent'" style="background-image: url('https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?auto=format&fit=crop&q=80&w=200')"></div>
+                    <div @click="setBg('https://images.unsplash.com/photo-1477346611705-65d1883cee1e?auto=format&fit=crop&q=80')" class="h-16 rounded-lg border-2 cursor-pointer bg-cover hover:scale-105 transition-transform duration-300" :class="settings.bgImage.includes('14773')?'border-blue-500':'border-transparent'" style="background-image: url('https://images.unsplash.com/photo-1477346611705-65d1883cee1e?auto=format&fit=crop&q=80&w=200')"></div>
+                    <div @click="setBg('https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?auto=format&fit=crop&q=80')" class="h-16 rounded-lg border-2 cursor-pointer bg-cover hover:scale-105 transition-transform duration-300" :class="settings.bgImage.includes('15347')?'border-blue-500':'border-transparent'" style="background-image: url('https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?auto=format&fit=crop&q=80&w=200')"></div>
                 </div>
             </div>
 
             <div>
                 <label class="block text-xs font-bold opacity-50 uppercase mb-4" x-text="t('language')">Language</label>
                 <div class="flex gap-3">
-                    <button @click="setLang('en'); window.location.reload()" class="flex-1 py-2 rounded-lg border font-bold transition-all" :class="lang === 'en' ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-200 dark:border-gray-700'">English</button>
-                    <button @click="setLang('zh'); window.location.reload()" class="flex-1 py-2 rounded-lg border font-bold transition-all" :class="lang === 'zh' ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-200 dark:border-gray-700'">中文</button>
+                    <button @click="setLang('en'); window.location.reload()" class="flex-1 py-2 rounded-lg border font-bold transition-all hover:scale-[1.02]" :class="lang === 'en' ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-200 dark:border-gray-700'">English</button>
+                    <button @click="setLang('zh'); window.location.reload()" class="flex-1 py-2 rounded-lg border font-bold transition-all hover:scale-[1.02]" :class="lang === 'zh' ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-200 dark:border-gray-700'">中文</button>
                 </div>
             </div>
         </div>

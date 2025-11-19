@@ -3,10 +3,7 @@ from question_service import service
 
 app = Flask(__name__)
 
-# --- 核心修复：自动判断是否为 HTMX 请求 ---
 def render_page(template_name, **kwargs):
-    # 如果是 HTMX 请求，使用 partial_layout (只渲染内容，不刷新音乐)
-    # 如果是普通请求，使用 layout (渲染全页，初始化音乐)
     layout = "partial_layout.html" if request.headers.get('HX-Request') else "layout.html"
     return render_template(template_name, layout=layout, **kwargs)
 
@@ -18,8 +15,8 @@ def dashboard():
 @app.route('/quiz')
 def quiz_page():
     mode = request.args.get('mode', 'training')
-    book = request.args.get('book')
-    return render_page('quiz.html', mode=mode, book=book)
+    book_id = request.args.get('book', 'root') 
+    return render_page('quiz.html', mode=mode, book=book_id)
 
 @app.route('/api/get_question', methods=['GET'])
 def api_get_question():
@@ -27,14 +24,35 @@ def api_get_question():
     book = request.args.get('book')
     q_id = request.args.get('q_id')
     
-    question = service.get_question(mode=mode, q_id=q_id, book_name=book)
+    question = service.get_question(mode=mode, q_id=q_id, book_id=book)
     
     if not question:
         if mode == 'mistake':
-            return jsonify({"error": "Mistake book is empty!", "code": 404}), 404
+            return jsonify({"error": "Book empty!", "code": 404}), 404
         return jsonify({"error": "No questions available", "code": 404}), 404
         
     return jsonify(question)
+
+@app.route('/api/book_details', methods=['GET'])
+def api_book_details():
+    book_id = request.args.get('book', 'root')
+    data = service.get_notebook_view(book_id)
+    return jsonify(data)
+
+# --- [NEW] API: 获取所有本子列表 (下拉菜单) ---
+@app.route('/api/get_notebooks', methods=['GET'])
+def api_get_notebooks():
+    return jsonify(service.get_notebook_list_simple())
+
+# --- [NEW] API: 添加题目到本子 ---
+@app.route('/api/add_to_book', methods=['POST'])
+def api_add_to_book():
+    data = request.json
+    book_id = data.get('book_id')
+    q_id = data.get('q_id')
+    if not book_id or not q_id: return jsonify({"success": False})
+    success = service.add_question_to_target_book(book_id, q_id)
+    return jsonify({"success": success})
 
 @app.route('/api/submit', methods=['POST'])
 def api_submit():
@@ -48,9 +66,13 @@ def api_submit():
 def api_create_book():
     data = request.json
     name = data.get('name')
+    parent = data.get('parent', 'root')
+    tags = data.get('tags', '').split(',') 
+    tags = [t.strip() for t in tags if t.strip()]
+    
     if not name: return jsonify({"success": False, "msg": "Name required"})
-    if service.create_mistake_book(name): return jsonify({"success": True})
-    return jsonify({"success": False, "msg": "Book exists"})
+    if service.create_notebook(name, parent, tags): return jsonify({"success": True})
+    return jsonify({"success": False, "msg": "Error creating book"})
 
 @app.route('/api/ai_chat', methods=['POST'])
 def api_ai_chat():

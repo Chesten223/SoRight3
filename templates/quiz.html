@@ -1,17 +1,30 @@
 {% extends request.args.get('layout', 'layout.html') %}
 
 {% block content %}
-<div class="h-full w-full flex flex-col" x-data="quizApp('{{ mode }}', '{{ book }}')" x-init="init()">
+<div class="h-full w-full flex flex-col relative" x-data="quizApp('{{ mode }}', '{{ book }}')" x-init="init()">
 
-    <div class="absolute top-4 w-full z-40 flex items-center justify-between px-6 pointer-events-none">
+    <div class="absolute top-4 w-full z-[100] flex items-center justify-between px-6 pointer-events-none">
         <a href="/" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true"
            class="pointer-events-auto flex items-center gap-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md px-4 py-2 rounded-full border border-white/20 shadow-sm font-bold text-sm hover:scale-105 transition-transform">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
             <span x-text="t('exit')">Exit</span>
         </a>
         
-        <div class="pointer-events-auto px-5 py-2 rounded-full bg-white/80 dark:bg-slate-800/80 border border-white/20 backdrop-blur-md shadow-sm text-xs font-black uppercase tracking-widest opacity-70">
-            <span x-text="bookName ? ('📕 ' + bookName) : (mode + ' Mode')"></span>
+        <div class="pointer-events-auto px-5 py-2 rounded-full bg-white/80 dark:bg-slate-800/80 border border-white/20 backdrop-blur-md shadow-sm text-xs font-bold flex items-center gap-2 overflow-hidden max-w-md" 
+             x-show="mode === 'mistake'">
+             <template x-for="(crumb, idx) in bookData.breadcrumbs" :key="crumb.id">
+                <div class="flex items-center gap-2">
+                    <span @click="loadBook(crumb.id)" 
+                          class="cursor-pointer hover:text-blue-500 transition-colors"
+                          :class="idx === bookData.breadcrumbs.length - 1 ? 'opacity-100 underline decoration-blue-500' : 'opacity-50'"
+                          x-text="crumb.name"></span>
+                    <span x-show="idx < bookData.breadcrumbs.length - 1" class="opacity-30">/</span>
+                </div>
+             </template>
+        </div>
+
+        <div x-show="mode !== 'mistake'" class="pointer-events-auto px-5 py-2 rounded-full bg-white/80 dark:bg-slate-800/80 border border-white/20 backdrop-blur-md shadow-sm text-xs font-black uppercase tracking-widest opacity-70">
+            <span x-text="mode + ' Mode'"></span>
         </div>
 
         <button @click="toggleAI()" class="pointer-events-auto px-4 py-2 rounded-full border border-white/20 transition-all duration-300 backdrop-blur-md shadow-sm flex items-center gap-2 group font-bold" 
@@ -22,122 +35,16 @@
     </div>
 
     <div class="flex-1 flex overflow-hidden relative h-full pt-16">
-        <div class="flex-1 h-full flex flex-col items-center justify-center p-4 transition-all duration-500" :class="aiOpen ? 'mr-96' : 'mr-0'">
-            
-            <div class="w-full max-w-4xl h-[85vh] glass-panel flex flex-col relative shadow-2xl overflow-hidden">
-                
-                <div x-show="loading" class="absolute inset-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm flex items-center justify-center">
-                    <div class="w-16 h-16 border-8 border-gray-100 dark:border-slate-700 border-t-blue-500 rounded-full animate-spin"></div>
-                </div>
+        
+        {% include 'components/quiz_sidebar_left.html' %}
+        
+        {% include 'components/quiz_content.html' %}
 
-                <div class="flex-1 overflow-y-auto p-10 md:p-16 no-scrollbar scroll-smooth">
-                    <div class="flex flex-wrap gap-3 mb-8">
-                        <span class="px-3 py-1 rounded-lg bg-gray-100 dark:bg-white/5 text-xs font-bold uppercase tracking-wide opacity-60" x-text="question.id"></span>
-                        <template x-for="tag in (question.tags || [])">
-                            <span class="px-3 py-1 rounded-lg bg-blue-500/10 text-blue-500 text-xs font-bold uppercase tracking-wide border border-blue-500/20" x-text="tag"></span>
-                        </template>
-                    </div>
+        {% include 'components/quiz_sidebar_right.html' %}
 
-                    <div class="prose prose-xl dark:prose-invert max-w-none mb-12 math-content font-medium leading-loose" x-html="question.content"></div>
-
-                    <div class="grid gap-5 mb-8">
-                        <template x-for="opt in question.options" :key="opt.id">
-                            <div @click="selectOption(opt.id)" class="group relative p-6 pl-20 rounded-2xl transition-all duration-200 cursor-pointer overflow-hidden hover:shadow-lg hover:-translate-y-1" 
-                                 :class="getOptionClass(opt.id)">
-                                <div class="absolute left-6 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full border-2 flex items-center justify-center text-lg font-black transition-all" :class="getOptionCircleClass(opt.id)">
-                                    <span x-text="opt.id"></span>
-                                </div>
-                                <div class="math-content text-xl font-medium" x-html="opt.text"></div>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-
-                <div class="p-6 border-t border-white/20 bg-white/50 dark:bg-black/20 backdrop-blur-xl flex justify-between items-center z-20">
-                    <div class="flex items-center min-h-[3rem]">
-                        <div x-show="submitted" x-transition class="flex items-center space-x-6">
-                            <div class="flex flex-col">
-                                <span class="text-[10px] opacity-50 uppercase font-black tracking-widest">Mastery</span>
-                                <div class="w-32 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mt-2">
-                                    <div class="h-full bg-green-500 transition-all duration-1000" :style="'width: ' + (feedback.metrics?.proficiency || 0) + '%'"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="flex gap-4">
-                        <button x-show="!submitted" @click="submit()" :disabled="!selectedOption" 
-                                class="px-10 py-4 bg-slate-900 dark:bg-white dark:text-slate-900 text-white rounded-2xl font-bold shadow-xl transition-all hover:-translate-y-1 disabled:opacity-50 disabled:translate-y-0">
-                            Confirm
-                        </button>
-                        
-                        <div x-show="submitted" class="flex gap-4">
-                            <button x-show="!feedback.is_correct" @click="showExplanation = true" class="px-6 py-4 bg-red-500/10 text-red-500 rounded-2xl font-bold hover:bg-red-500/20 transition-colors">
-                                Analysis
-                            </button>
-                            <button @click="loadNext()" class="px-10 py-4 bg-blue-500 hover:brightness-110 text-white rounded-2xl font-bold shadow-xl transition-all hover:-translate-y-1 flex items-center">
-                                Next <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div x-show="showExplanation" 
-             class="absolute bottom-0 left-0 w-full flex justify-center z-50 pointer-events-none"
-             x-transition:enter="transition ease-out duration-500"
-             x-transition:enter-start="translate-y-full opacity-0"
-             x-transition:enter-end="translate-y-0 opacity-100"
-             x-transition:leave="transition ease-in duration-300"
-             x-transition:leave-start="translate-y-0 opacity-100"
-             x-transition:leave-end="translate-y-full opacity-0">
-            
-            <div class="pointer-events-auto w-full max-w-3xl bg-white/95 dark:bg-slate-800/95 backdrop-blur-3xl border border-white/20 shadow-2xl rounded-t-[3rem] p-10 pb-16 relative">
-                <button @click="showExplanation = false" class="absolute top-6 right-6 p-3 bg-gray-100 dark:bg-white/10 rounded-full"><svg class="w-5 h-5 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
-                
-                <div class="flex items-center gap-4 mb-6">
-                    <div class="w-12 h-12 bg-red-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-red-500/30">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    </div>
-                    <h3 class="text-2xl font-black">Diagnosis</h3>
-                </div>
-                
-                <div class="prose prose-lg max-w-none text-gray-600 dark:text-gray-300 math-content bg-red-50 dark:bg-red-900/20 p-6 rounded-2xl border border-red-100 dark:border-red-500/20">
-                    <p class="font-bold mb-2">Correct: <span class="text-green-600 text-xl" x-text="feedback.correct_id"></span></p>
-                    <div x-html="feedback.explanation"></div>
-                </div>
-                
-                <div class="mt-8 flex gap-4">
-                    <button @click="showExplanation = false; toggleAI()" class="flex-1 py-4 bg-blue-500/10 text-blue-500 rounded-2xl font-bold hover:bg-blue-500/20 transition-colors text-lg">Ask AI</button>
-                    <button @click="showExplanation = false; loadNext()" class="flex-1 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-bold transition-colors text-lg shadow-lg">Next</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="fixed top-0 right-0 h-full w-96 bg-white/90 dark:bg-slate-800/90 backdrop-blur-3xl border-l border-white/20 shadow-2xl transform transition-transform duration-500 z-[80] flex flex-col"
-             :class="aiOpen ? 'translate-x-0' : 'translate-x-full'">
-            <div class="h-20 flex items-center px-8 border-b border-white/10 bg-white/5 dark:bg-black/5">
-                <div class="w-3 h-3 rounded-full bg-green-500 animate-pulse mr-4"></div>
-                <span class="font-bold text-xl tracking-tight">AI Assistant</span>
-            </div>
-            <div class="flex-1 overflow-y-auto p-6 space-y-6">
-                <template x-for="(msg, index) in chatHistory" :key="index">
-                    <div class="flex gap-4 animate-fade-in" :class="msg.role === 'user' ? 'flex-row-reverse' : ''">
-                        <div class="max-w-[85%] p-4 rounded-2xl shadow-sm text-sm border leading-relaxed" 
-                             :class="msg.role === 'user' ? 'bg-blue-500 text-white rounded-tr-none border-blue-500' : 'bg-white dark:bg-white/10 rounded-tl-none border-transparent font-medium'">
-                            <span x-text="msg.text"></span>
-                        </div>
-                    </div>
-                </template>
-            </div>
-            <div class="p-6 border-t border-white/10 relative z-50">
-                <div class="relative flex items-center">
-                    <input type="text" x-model="userMsg" @keydown.enter="sendMessage()" placeholder="Type question..." class="w-full bg-gray-100 dark:bg-white/5 border-transparent focus:bg-white dark:focus:bg-black/20 rounded-2xl px-6 py-4 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium">
-                    <button @click="sendMessage()" class="absolute right-3 p-2 bg-white dark:bg-white/10 rounded-xl opacity-50 hover:opacity-100"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7"></path></svg></button>
-                </div>
-            </div>
-        </div>
     </div>
+
+    {% include 'components/quiz_modals.html' %}
+
 </div>
 {% endblock %}

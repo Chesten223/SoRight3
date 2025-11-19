@@ -1,35 +1,151 @@
 {
-  "mistake_books": {
-    "default": [
-      "drill_incline_hard_01",
-      "drill_incline_easy_01",
-      "exam_2022_elec_05",
-      "exam_2023_mechanics_01"
-    ],
-    "错题本2": [],
-    "错题本3": []
-  },
   "metrics": {
     "exam_2022_elec_05": {
-      "errors": 2,
-      "proficiency": 10,
-      "attempts": 4
+      "errors": 8,
+      "proficiency": 15,
+      "attempts": 11
     },
     "drill_incline_hard_01": {
+      "errors": 5,
+      "proficiency": 0,
+      "attempts": 5
+    },
+    "drill_incline_easy_01": {
+      "errors": 3,
+      "proficiency": 30,
+      "attempts": 6
+    },
+    "exam_2023_mechanics_01": {
+      "errors": 1,
+      "proficiency": 30,
+      "attempts": 3
+    },
+    "gk_02_08": {
+      "errors": 4,
+      "proficiency": 20,
+      "attempts": 6,
+      "stage": 0,
+      "next_review": 1763602891.4481604
+    },
+    "gk_02_09": {
+      "errors": 2,
+      "proficiency": 30,
+      "attempts": 4
+    },
+    "gk_02_17": {
+      "errors": 1,
+      "proficiency": 0,
+      "attempts": 1
+    },
+    "gk_02_18": {
+      "errors": 1,
+      "proficiency": 0,
+      "attempts": 1
+    },
+    "gk_02_15": {
       "errors": 2,
       "proficiency": 0,
       "attempts": 2
     },
-    "drill_incline_easy_01": {
-      "errors": 3,
+    "gk_02_07": {
+      "errors": 2,
       "proficiency": 0,
-      "attempts": 4
+      "attempts": 2
     },
-    "exam_2023_mechanics_01": {
+    "gk_02_03": {
+      "errors": 1,
+      "proficiency": 0,
+      "attempts": 1
+    },
+    "gk_02_14": {
+      "errors": 0,
+      "proficiency": 15,
+      "attempts": 1
+    },
+    "gk_02_04": {
       "errors": 1,
       "proficiency": 0,
       "attempts": 1
     }
   },
-  "streak": 5
+  "streak": 5,
+  "notebooks": {
+    "root": {
+      "id": "root",
+      "name": "My Library",
+      "parent": null,
+      "children": [
+        "ebc577f5-51c5-43ac-aa79-14e2c2e9055c",
+        "e44acd7b-673f-48ee-b281-19648a1e860e",
+        "ca0480db-ca98-4767-beca-452b2ce711db",
+        "85178dba-d95c-4835-9f11-f4d6ee95e852"
+      ],
+      "questions": [],
+      "tags": []
+    },
+    "ebc577f5-51c5-43ac-aa79-14e2c2e9055c": {
+      "id": "ebc577f5-51c5-43ac-aa79-14e2c2e9055c",
+      "name": "default",
+      "parent": "root",
+      "children": [],
+      "questions": [
+        "drill_incline_hard_01",
+        "drill_incline_easy_01",
+        "exam_2022_elec_05",
+        "exam_2023_mechanics_01",
+        "gk_02_08",
+        "gk_02_09",
+        "gk_02_17",
+        "gk_02_18",
+        "gk_02_15",
+        "gk_02_07"
+      ],
+      "tags": []
+    },
+    "e44acd7b-673f-48ee-b281-19648a1e860e": {
+      "id": "e44acd7b-673f-48ee-b281-19648a1e860e",
+      "name": "错题本2",
+      "parent": "root",
+      "children": [
+        "e74c73cc-508f-4709-85bf-d6bf112cdc56"
+      ],
+      "questions": [
+        "gk_02_07"
+      ],
+      "tags": []
+    },
+    "ca0480db-ca98-4767-beca-452b2ce711db": {
+      "id": "ca0480db-ca98-4767-beca-452b2ce711db",
+      "name": "错题本3",
+      "parent": "root",
+      "children": [],
+      "questions": [],
+      "tags": []
+    },
+    "85178dba-d95c-4835-9f11-f4d6ee95e852": {
+      "id": "85178dba-d95c-4835-9f11-f4d6ee95e852",
+      "name": "Inbox",
+      "parent": "root",
+      "children": [],
+      "questions": [
+        "gk_02_03",
+        "gk_02_15",
+        "gk_02_04",
+        "gk_02_07",
+        "gk_02_08"
+      ],
+      "tags": []
+    },
+    "e74c73cc-508f-4709-85bf-d6bf112cdc56": {
+      "id": "e74c73cc-508f-4709-85bf-d6bf112cdc56",
+      "name": "22",
+      "parent": "e44acd7b-673f-48ee-b281-19648a1e860e",
+      "children": [],
+      "questions": [
+        "gk_02_15",
+        "gk_02_04"
+      ],
+      "tags": []
+    }
+  }
 }
