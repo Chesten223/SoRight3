@@ -1,0 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap');
+
+:root {
+    /* --- Light Mode Variables --- */
+    --bg-primary: #f8fafc;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --glass-bg: rgba(255, 255, 255, 0.75);
+    --glass-border: rgba(255, 255, 255, 0.8);
+    --glass-shadow: rgba(0, 0, 0, 0.05);
+    --accent: 59, 130, 246; /* Blue */
+}
+
+/* --- Dark Mode Variables --- */
+html.dark {
+    --bg-primary: #0f172a;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --glass-bg: rgba(30, 41, 59, 0.75);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-shadow: rgba(0, 0, 0, 0.3);
+}
+
+/* 基础设置 */
+body {
+    font-family: 'Inter', sans-serif;
+    color: var(--text-primary);
+    background-color: var(--bg-primary);
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    transition: color 0.3s, background-color 0.3s;
+}
+
+/* --- 组件类 --- */
+.glass-panel {
+    background: var(--glass-bg);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 8px 32px var(--glass-shadow);
+    border-radius: 1.5rem;
+    transition: transform 0.2s, box-shadow 0.2s, background 0.3s;
+}
+
+.text-theme { color: rgb(var(--accent)); }
+.bg-theme { background-color: rgb(var(--accent)); }
+.border-theme { border-color: rgb(var(--accent)); }
+
+/* 隐藏滚动条 */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* MathJax 字体修正 */
+mjx-container { font-size: 110% !important; outline: none; }
+.math-content img { border-radius: 8px; margin: 1rem 0; }
+
+/* 动画 */
+.animate-fade-in { animation: fadeIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }

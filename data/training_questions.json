@@ -1,0 +1,43 @@
+[
+  {
+    "id": "drill_incline_hard_01",
+    "mode": "training",
+    "title": "斜面模型综合训练 (Level 2)",
+    "tags": ["受力分析", "摩擦力", "正交分解"],
+    "content": "质量为 $m$ 的滑块在**粗糙**斜面上受水平推力 $F$ 作用，恰好沿斜面**匀速上滑**。斜面倾角为 $\\theta$，动摩擦因数为 $\\mu$。求推力 $F$ 的大小。",
+    "options": [
+      {"id": "A", "text": "$F = mg(\\sin\\theta + \\mu\\cos\\theta)$"},
+      {"id": "B", "text": "$F = \\frac{mg(\\sin\\theta + \\mu\\cos\\theta)}{\\cos\\theta - \\mu\\sin\\theta}$"},
+      {"id": "C", "text": "$F = mg\\tan\\theta$"},
+      {"id": "D", "text": "$F = \\frac{mg(\\sin\\theta - \\mu\\cos\\theta)}{\\cos\\theta + \\mu\\sin\\theta}$"}
+    ],
+    "correct_id": "B",
+    "diagnosis": {
+      "trigger": true,
+      "next_step_logic": "fallback",
+      "target_question_id": "drill_incline_easy_01",
+      "message": "检测到受力分析模型构建困难，系统正在移除【摩擦力】变量，进行降级测试。"
+    },
+    "ai_context": {
+      "hint_prompt": "引导学生画受力图。注意水平力 F 不是沿斜面的，需要分解。"
+    }
+  },
+  {
+    "id": "drill_incline_easy_01",
+    "mode": "training",
+    "title": "斜面模型诊断 (Level 1 - 无摩擦)",
+    "tags": ["基础诊断", "正交分解"],
+    "content": "【诊断模式】我们简化环境：假设斜面**光滑** ($\\mu=0$)，滑块受水平推力 $F$ 处于**静止**状态。请列出沿斜面方向的平衡方程。",
+    "options": [
+      {"id": "A", "text": "$F\\cos\\theta = mg\\sin\\theta$"},
+      {"id": "B", "text": "$F\\sin\\theta = mg\\cos\\theta$"},
+      {"id": "C", "text": "$F = mg\\sin\\theta$"},
+      {"id": "D", "text": "$F = mg\\cos\\theta$"}
+    ],
+    "correct_id": "A",
+    "diagnosis": null,
+    "ai_context": {
+      "hint_prompt": "这是一个纯粹的数学几何问题。水平力F沿斜面方向的分力是多少？注意角度。"
+    }
+  }
+]

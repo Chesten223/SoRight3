@@ -1,0 +1,35 @@
+{
+  "mistake_books": {
+    "default": [
+      "drill_incline_hard_01",
+      "drill_incline_easy_01",
+      "exam_2022_elec_05",
+      "exam_2023_mechanics_01"
+    ],
+    "错题本2": [],
+    "错题本3": []
+  },
+  "metrics": {
+    "exam_2022_elec_05": {
+      "errors": 2,
+      "proficiency": 10,
+      "attempts": 4
+    },
+    "drill_incline_hard_01": {
+      "errors": 2,
+      "proficiency": 0,
+      "attempts": 2
+    },
+    "drill_incline_easy_01": {
+      "errors": 3,
+      "proficiency": 0,
+      "attempts": 4
+    },
+    "exam_2023_mechanics_01": {
+      "errors": 1,
+      "proficiency": 0,
+      "attempts": 1
+    }
+  },
+  "streak": 5
+}
