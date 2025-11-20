@@ -1,6 +1,4 @@
-<div x-show="showExplanation" class="absolute bottom-0 left-0 w-full flex justify-center z-50 pointer-events-none"
-     x-transition:enter="transition ease-out duration-500" x-transition:enter-start="translate-y-full opacity-0" x-transition:enter-end="translate-y-0 opacity-100"
-     x-transition:leave="transition ease-in duration-300" x-transition:leave-start="translate-y-0 opacity-100" x-transition:leave-end="translate-y-full opacity-0">
+<div x-show="showExplanation" class="absolute bottom-0 left-0 w-full flex justify-center z-50 pointer-events-none" ...>
     <div class="pointer-events-auto w-full max-w-3xl bg-white/95 dark:bg-slate-800/95 backdrop-blur-3xl border border-white/20 shadow-2xl rounded-t-[3rem] p-10 pb-16 relative">
         <button @click="showExplanation = false" class="absolute top-6 right-6 p-3 bg-gray-100 dark:bg-white/10 rounded-full"><svg class="w-5 h-5 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
         <div class="flex items-center gap-4 mb-6">
@@ -33,13 +31,10 @@
 <div x-show="showCreateModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm" x-transition.opacity style="display: none;">
     <div @click.away="showCreateModal = false" class="glass-panel p-6 w-full max-w-sm shadow-2xl bg-white dark:bg-slate-800 transform transition-all scale-100">
         <h3 class="font-bold text-lg mb-4"><span x-text="t('new_folder_title')">New Folder</span> <span class="opacity-60" x-text="'in ' + bookData.info?.name"></span></h3>
-        
         <label class="text-xs font-bold opacity-50 uppercase mb-1 block" x-text="t('name_label')">Name</label>
         <input type="text" x-model="subBookName" class="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent mb-4 focus:ring-2 focus:ring-blue-500 outline-none">
-        
         <label class="text-xs font-bold opacity-50 uppercase mb-1 block" x-text="t('tags_label')">Custom Tags</label>
         <input type="text" x-model="subBookTags" class="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent mb-4 focus:ring-2 focus:ring-blue-500 outline-none text-sm" :placeholder="t('tags_placeholder')">
-        
         <div class="flex gap-2">
             <button @click="showCreateModal = false" class="flex-1 py-2 bg-gray-100 dark:bg-white/10 rounded-lg font-bold opacity-70 hover:opacity-100 transition-opacity" x-text="t('cancel')">Cancel</button>
             <button @click="confirmCreateSubBook()" class="flex-1 py-2 bg-blue-500 text-white rounded-lg font-bold hover:bg-blue-600 transition-colors" x-text="t('create')">Create</button>
@@ -47,18 +42,149 @@
     </div>
 </div>
 
-<div x-show="notify.show" 
-     x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0"
-     x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-4"
-     class="fixed bottom-6 left-6 z-[110] glass-panel px-6 py-4 flex items-center gap-4 border-2 shadow-2xl min-w-[240px]"
-     :class="notify.show ? 'toast-border-anim' : 'border-transparent'"
+<div x-show="showQuestionPicker" class="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm" 
+     x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
      style="display: none;">
-     
-    <div class="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-lg">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-    </div>
-    <div>
-        <div class="font-bold text-sm" x-text="notify.title">Notification</div>
-        <div class="text-xs opacity-60" x-text="notify.msg">Action completed</div>
+    <div @click.away="showQuestionPicker = false" class="glass-panel w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl bg-white dark:bg-slate-800 border border-white/10">
+        
+        <div class="p-6 border-b border-gray-200 dark:border-white/10 flex justify-between items-center">
+            <div>
+                <h3 class="font-bold text-lg">Import Question</h3>
+                <div class="flex gap-1 text-xs mt-1 opacity-50">
+                    <template x-for="(crumb, i) in pickerData.breadcrumbs" :key="crumb.id">
+                        <div class="flex gap-1">
+                            <span @click="loadPickerData(crumb.id)" class="hover:underline cursor-pointer hover:text-blue-500" x-text="crumb.name"></span>
+                            <span x-show="i < pickerData.breadcrumbs.length - 1">/</span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+            <button @click="showQuestionPicker = false" class="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+            
+            <div x-show="pickerData.breadcrumbs.length > 1" 
+                 @click="loadPickerData(pickerData.breadcrumbs[pickerData.breadcrumbs.length - 2].id)"
+                 class="p-2 px-4 rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-white/5 flex items-center gap-2 opacity-60 hover:opacity-100 text-xs font-bold mb-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                Back
+            </div>
+
+            <template x-for="sub in pickerData.sub_notebooks" :key="sub.id">
+                 <div @click="loadPickerData(sub.id)" 
+                      class="p-3 rounded-xl cursor-pointer flex items-center gap-3 hover:bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 border border-transparent hover:border-yellow-500/30">
+                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"></path></svg>
+                     <div class="flex-1 font-bold text-sm" x-text="sub.name"></div>
+                     <svg class="w-4 h-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                 </div>
+            </template>
+
+            <template x-for="q in pickerData.questions" :key="q.id">
+                <div @click="insertQuestionRef(q.id)" class="p-4 rounded-xl border border-gray-200 dark:border-white/10 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer transition-colors group">
+                    <div class="flex justify-between mb-1">
+                        <span class="text-xs font-bold opacity-50" x-text="q.id"></span>
+                        <div class="flex gap-1">
+                            <template x-for="tag in q.tags">
+                                <span class="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-white/10 text-[10px]" x-text="tag"></span>
+                            </template>
+                        </div>
+                    </div>
+                    <div class="text-sm font-medium truncate" x-text="q.summary"></div>
+                </div>
+            </template>
+
+            <div x-show="pickerData.sub_notebooks.length === 0 && pickerData.questions.length === 0" class="text-center p-8 opacity-50">
+                Empty Folder
+            </div>
+        </div>
     </div>
 </div>
+
+<div x-show="notify.show" ...> </div>
+
+
+<div x-show="showRefModal" 
+     @click="showRefModal = false"
+     x-transition:enter="transition ease-spring duration-500"
+     x-transition:enter-start="opacity-0 translate-y-8"
+     x-transition:enter-end="opacity-100 translate-y-0"
+     x-transition:leave="transition ease-in duration-200"
+     x-transition:leave-start="opacity-100 translate-y-0"
+     x-transition:leave-end="opacity-0 translate-y-8"
+     class="fixed inset-0 z-[130] flex items-center justify-center bg-gray-500/5 dark:bg-black/40 backdrop-blur-[2px]" 
+     style="display: none;">
+    
+    <div @click.stop 
+         class="glass-panel w-full max-w-3xl h-[80vh] flex flex-col shadow-2xl bg-white/95 dark:bg-[#151515]/95 relative border border-white/20 rounded-3xl overflow-hidden ring-1 ring-black/5">
+        
+        <div class="px-8 py-6 flex justify-between items-center shrink-0 z-10">
+            <div class="flex items-center gap-3">
+                <div class="px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-black uppercase tracking-wider" x-text="refQuestion.id"></div>
+                <div class="h-4 w-px bg-gray-200 dark:bg-white/10"></div>
+                <span x-show="!refSubmitted" class="text-sm font-bold opacity-50">Practice</span>
+                <span x-show="refSubmitted" class="text-sm font-bold animate-fade-in" :class="refFeedback.is_correct ? 'text-green-500' : 'text-red-500'" x-text="refFeedback.is_correct ? 'Correct' : 'Wrong'"></span>
+            </div>
+            
+            <button @click="showRefModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto px-8 pb-8 md:px-12 md:pb-12 custom-scrollbar">
+            <div class="prose prose-lg dark:prose-invert max-w-none math-content mb-10 leading-relaxed" x-html="refQuestion.content"></div>
+            
+            <div class="grid gap-4">
+                <template x-for="opt in refQuestion.options" :key="opt.id">
+                    <div @click.stop="selectRefOption(opt.id)" 
+                         class="group relative p-5 pl-16 rounded-2xl transition-all duration-300 cursor-pointer border"
+                         :class="getRefOptionClass(opt.id)">
+                        
+                        <div class="absolute left-5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm font-bold transition-all"
+                             :class="refSelected === opt.id ? 'border-blue-500 text-blue-500 scale-110' : 'border-gray-300 dark:border-gray-600 text-gray-400 group-hover:border-gray-400'">
+                            <span x-text="opt.id"></span>
+                        </div>
+                        <div class="math-content font-medium text-lg" x-html="opt.text"></div>
+                    </div>
+                </template>
+            </div>
+            
+            <div x-show="refShowExplanation" 
+                 x-transition:enter="transition ease-out duration-500"
+                 x-transition:enter-start="opacity-0 translate-y-8"
+                 x-transition:enter-end="opacity-100 translate-y-0"
+                 class="mt-10 p-8 bg-blue-50/50 dark:bg-blue-900/10 rounded-3xl border border-blue-100 dark:border-blue-500/20">
+                 
+                 <div class="flex items-center gap-2 mb-4 text-blue-600 dark:text-blue-400">
+                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                     <span class="font-bold uppercase tracking-widest text-xs">Insight</span>
+                 </div>
+                 
+                 <div class="prose prose-sm dark:prose-invert max-w-none math-content" 
+                      x-html="refFeedback.explanation || refQuestion.ai_context?.explanation || 'Explanation hidden.'"></div>
+            </div>
+        </div>
+
+        <div class="p-6 flex justify-between items-center bg-white/80 dark:bg-[#151515]/80 backdrop-blur-xl border-t border-gray-100 dark:border-white/5 z-20">
+            <button @click="refShowExplanation = !refShowExplanation" 
+                    class="flex items-center gap-2 px-4 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-sm font-bold opacity-60 hover:opacity-100 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                <span x-text="refShowExplanation ? 'Hide' : 'Analyze'"></span>
+            </button>
+
+            <div class="flex gap-3">
+                <button x-show="!refSubmitted" @click="submitRef()" :disabled="!refSelected"
+                        class="px-10 py-3 bg-slate-900 dark:bg-white dark:text-black text-white rounded-2xl font-bold shadow-xl shadow-black/10 hover:scale-[1.02] transition-transform text-sm disabled:opacity-50 disabled:scale-100">
+                    Check Answer
+                </button>
+                <button x-show="refSubmitted" @click="showRefModal = false" class="px-8 py-3 bg-gray-100 dark:bg-white/10 rounded-2xl font-bold hover:bg-gray-200 dark:hover:bg-white/20 transition-colors text-sm">
+                    Done
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div x-show="showAddToBookModal" ...> ... </div>
+<div x-show="showCreateModal" ...> ... </div>
+<div x-show="notify.show" ...> ... </div>

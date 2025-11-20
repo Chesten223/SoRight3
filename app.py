@@ -82,5 +82,36 @@ def api_ai_chat():
     reply = f"AI 收到：{user_msg}。提示：{context.get('hint_prompt', '请回顾基础概念。')}"
     return jsonify({"reply": reply})
 
+# --- [NEW] Notes System Routes ---
+
+@app.route('/notes')
+def notes_page():
+    note_id = request.args.get('id', 'root')
+    return render_page('notes.html', note_id=note_id)
+
+@app.route('/api/notes/view', methods=['GET'])
+def api_notes_view():
+    note_id = request.args.get('id', 'root')
+    data = service.get_note_view(note_id)
+    return jsonify(data)
+
+@app.route('/api/notes/create', methods=['POST'])
+def api_notes_create():
+    data = request.json
+    name = data.get('name')
+    type = data.get('type', 'folder')
+    parent = data.get('parent', 'root')
+    if not name: return jsonify({"success": False, "msg": "Name required"})
+    if service.create_note_item(name, type, parent): return jsonify({"success": True})
+    return jsonify({"success": False, "msg": "Failed"})
+
+@app.route('/api/notes/save', methods=['POST'])
+def api_notes_save():
+    data = request.json
+    note_id = data.get('id')
+    content = data.get('content')
+    if service.save_note_content(note_id, content): return jsonify({"success": True})
+    return jsonify({"success": False, "msg": "Failed"})
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

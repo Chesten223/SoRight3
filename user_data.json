@@ -48,9 +48,11 @@
       "attempts": 2
     },
     "gk_02_07": {
-      "errors": 2,
-      "proficiency": 0,
-      "attempts": 2
+      "errors": 8,
+      "proficiency": 5,
+      "attempts": 9,
+      "stage": 0,
+      "next_review": 1763645920.5170045
     },
     "gk_02_03": {
       "errors": 1,
@@ -66,6 +68,20 @@
       "errors": 1,
       "proficiency": 0,
       "attempts": 1
+    },
+    "gk_02_05": {
+      "errors": 1,
+      "proficiency": 15,
+      "attempts": 2,
+      "stage": 1,
+      "next_review": 1763648551.2731469
+    },
+    "gk_02_10": {
+      "errors": 0,
+      "proficiency": 15,
+      "attempts": 1,
+      "stage": 1,
+      "next_review": 1763648516.721283
     }
   },
   "streak": 5,
@@ -110,7 +126,8 @@
         "e74c73cc-508f-4709-85bf-d6bf112cdc56"
       ],
       "questions": [
-        "gk_02_07"
+        "gk_02_07",
+        "gk_02_05"
       ],
       "tags": []
     },
@@ -132,7 +149,8 @@
         "gk_02_15",
         "gk_02_04",
         "gk_02_07",
-        "gk_02_08"
+        "gk_02_08",
+        "gk_02_05"
       ],
       "tags": []
     },
@@ -146,6 +164,57 @@
         "gk_02_04"
       ],
       "tags": []
+    }
+  },
+  "notes": {
+    "root": {
+      "id": "root",
+      "name": "My Notes",
+      "parent": null,
+      "children": [
+        "a503d77c-75ff-412c-a7ac-fd46a6d5c604",
+        "0a436126-2015-41bd-a87e-53eb1765baf7",
+        "84adb3a2-3f3c-4807-a547-0dc2a1da5805"
+      ],
+      "type": "folder"
+    },
+    "a503d77c-75ff-412c-a7ac-fd46a6d5c604": {
+      "id": "a503d77c-75ff-412c-a7ac-fd46a6d5c604",
+      "name": "文件夹1",
+      "parent": "root",
+      "type": "folder",
+      "children": [
+        "c1eca56f-9d1e-47a6-b7b0-96b563a121b3"
+      ],
+      "content": null,
+      "created_at": 1763598934.110303
+    },
+    "c1eca56f-9d1e-47a6-b7b0-96b563a121b3": {
+      "id": "c1eca56f-9d1e-47a6-b7b0-96b563a121b3",
+      "name": "笔记1",
+      "parent": "a503d77c-75ff-412c-a7ac-fd46a6d5c604",
+      "type": "file",
+      "children": null,
+      "content": "# 好啊\n\n[[gk_02_07]]\n\n所有\n\n**啊**",
+      "created_at": 1763598942.4139004
+    },
+    "0a436126-2015-41bd-a87e-53eb1765baf7": {
+      "id": "0a436126-2015-41bd-a87e-53eb1765baf7",
+      "name": "az",
+      "parent": "root",
+      "type": "file",
+      "children": null,
+      "content": "",
+      "created_at": 1763602319.7833538
+    },
+    "84adb3a2-3f3c-4807-a547-0dc2a1da5805": {
+      "id": "84adb3a2-3f3c-4807-a547-0dc2a1da5805",
+      "name": "按照",
+      "parent": "root",
+      "type": "file",
+      "children": null,
+      "content": "",
+      "created_at": 1763602325.7426775
     }
   }
 }

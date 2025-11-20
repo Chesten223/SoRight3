@@ -1,0 +1,79 @@
+{% extends request.args.get('layout', 'layout.html') %}
+
+{% block content %}
+<div class="h-full w-full flex flex-col relative" x-data="notesApp('{{ note_id }}')" x-init="init()">
+
+    <div class="absolute top-4 w-full z-[100] flex items-center justify-between px-6 pointer-events-none">
+        <a href="/" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true"
+           class="pointer-events-auto flex items-center gap-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md px-4 py-2 rounded-full border border-white/20 shadow-sm font-bold text-sm hover:scale-105 transition-transform">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            <span>Exit</span>
+        </a>
+        
+        <div class="pointer-events-auto px-5 py-2 rounded-full bg-white/80 dark:bg-slate-800/80 border border-white/20 backdrop-blur-md shadow-sm text-xs font-bold flex items-center gap-2 overflow-hidden max-w-md">
+             <template x-for="(crumb, idx) in viewData.breadcrumbs" :key="crumb.id">
+                <div class="flex items-center gap-2">
+                    <span @click="loadNote(crumb.id)" 
+                          class="cursor-pointer hover:text-blue-500 transition-colors"
+                          :class="idx === viewData.breadcrumbs.length - 1 ? 'opacity-100 underline decoration-blue-500' : 'opacity-50'"
+                          x-text="crumb.name"></span>
+                    <span x-show="idx < viewData.breadcrumbs.length - 1" class="opacity-30">/</span>
+                </div>
+             </template>
+        </div>
+
+        <button @click="toggleAI()" class="pointer-events-auto px-4 py-2 rounded-full border border-white/20 transition-all duration-300 backdrop-blur-md shadow-sm flex items-center gap-2 group font-bold" 
+                :class="aiOpen ? 'bg-blue-500 text-white border-blue-500' : 'bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-700'">
+            <span>AI Assist</span>
+            <div class="w-2 h-2 rounded-full" :class="aiOpen ? 'bg-white animate-pulse' : 'bg-green-500'"></div>
+        </button>
+    </div>
+
+    <div class="flex-1 flex overflow-hidden relative h-full pt-16">
+        
+        {% include 'components/notes_sidebar.html' %}
+        
+        {% include 'components/notes_editor.html' %}
+
+        {% include 'components/quiz_sidebar_right.html' %}
+
+    </div>
+
+    {% include 'components/quiz_modals.html' %}
+
+    <div x-show="showCreateModal" 
+         class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+         x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+         style="display: none;">
+        
+        <div @click.stop 
+             class="glass-panel p-8 w-full max-w-sm shadow-2xl bg-white dark:bg-slate-800 transform transition-all scale-100 border border-white/10">
+            
+            <h3 class="font-bold text-xl mb-6">Create Item</h3>
+            
+            <div class="flex p-1 bg-gray-100 dark:bg-white/5 rounded-xl mb-6">
+                <button @click="newItemType='folder'" class="flex-1 py-2 rounded-lg text-xs font-bold transition-all duration-300" :class="newItemType==='folder' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-500' : 'opacity-50 hover:opacity-100'">Folder</button>
+                <button @click="newItemType='file'" class="flex-1 py-2 rounded-lg text-xs font-bold transition-all duration-300" :class="newItemType==='file' ? 'bg-white dark:bg-slate-700 shadow-sm text-green-500' : 'opacity-50 hover:opacity-100'">Note File</button>
+            </div>
+
+            <label class="text-xs font-bold opacity-50 uppercase mb-2 block">Name</label>
+            
+            <input type="text" 
+                   x-model="newItemName" 
+                   @keydown.enter.prevent="createItem()"
+                   class="w-full p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-white/5 mb-6 focus:ring-2 focus:ring-blue-500 outline-none font-medium transition-all"
+                   placeholder="Enter name..."
+                   autofocus>
+            
+            <div class="flex gap-3">
+                <button @click="showCreateModal = false" class="flex-1 py-3 bg-gray-100 dark:bg-white/5 rounded-xl font-bold opacity-70 hover:opacity-100 transition-colors">Cancel</button>
+                <button @click="createItem()" class="flex-1 py-3 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 hover:scale-[1.02] transition-all shadow-lg shadow-blue-500/30">Create</button>
+            </div>
+        </div>
+        
+        <div class="absolute inset-0 -z-10" @click="showCreateModal = false"></div>
+    </div>
+
+</div>
+{% endblock %}

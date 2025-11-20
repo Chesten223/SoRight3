@@ -16,13 +16,13 @@
         })();
     </script>
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
-                    // [NEW] iOS 风格的弹簧动画曲线，极其丝滑
                     transitionTimingFunction: {
                         'spring': 'cubic-bezier(0.34, 1.56, 0.64, 1)',
                     }
@@ -30,10 +30,14 @@
             }
         }
     </script>
+    
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
     <script>MathJax = { tex: {inlineMath: [['$', '$']]}, svg: {fontCache: 'global'} };</script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
@@ -54,15 +58,15 @@
          @mouseenter="barOpen = true"></div>
 
     <div class="fixed top-0 left-0 w-full z-[60] transition-transform duration-500 ease-spring transform pointer-events-none"
-         :class="barOpen ? 'translate-y-0' : '-translate-y-full'"
+         :class="(barOpen || pomo.active) ? 'translate-y-0' : '-translate-y-full'"
          @mouseleave="barOpen = false">
         
-        <div class="mx-auto max-w-5xl mt-4 rounded-2xl px-10 py-5 shadow-2xl flex items-center justify-between glass-panel pointer-events-auto border border-white/20 backdrop-blur-xl">
+        <div class="mx-auto max-w-6xl mt-4 rounded-2xl px-8 py-4 shadow-2xl flex items-center justify-between glass-panel pointer-events-auto border border-white/20 backdrop-blur-xl">
             
             <div class="flex items-center gap-8 font-medium">
                 <a href="/" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true" class="flex items-center gap-3 hover:opacity-70 transition-opacity group">
                     <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold shadow-lg group-hover:scale-110 transition-transform ease-spring duration-300">P</div>
-                    <span class="font-bold text-xl tracking-tight">Physics Pro</span>
+                    <span class="font-bold text-xl tracking-tight hidden md:block">Physics Pro</span>
                 </a>
 
                 <span class="font-mono text-xl opacity-70 tracking-wider" x-text="timeString"></span>
@@ -73,13 +77,31 @@
                 </div>
             </div>
 
-            <div class="flex items-center gap-6">
-                <div class="flex items-center gap-3 bg-gray-100/80 dark:bg-white/10 rounded-full px-5 py-2.5 backdrop-blur-sm border border-transparent hover:border-white/20 transition-colors">
-                    <span class="text-sm font-bold truncate max-w-[120px]" x-text="music.isPlaying ? music.list[music.currentIdx].title : t('playing')"></span>
-                    <button @click="togglePlay()" class="hover:text-blue-500 hover:scale-110 transition-transform">
-                        <svg x-show="!music.isPlaying" class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                        <svg x-show="music.isPlaying" class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 bg-gray-100/80 dark:bg-white/10 rounded-full px-4 py-2 backdrop-blur-sm border border-transparent hover:border-white/20 transition-colors">
+                    
+                    <button @click="toggleMusicMode()" class="p-1 opacity-50 hover:opacity-100 hover:scale-110 transition-all" :title="music.mode">
+                        <svg x-show="music.mode === 'sequence'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                        <svg x-show="music.mode === 'loop'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        <svg x-show="music.mode === 'shuffle'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.25 19.25L15.5 15.5M19.25 4.75L15.5 8.5m-11 3.5l3.5 3.5 3.5-3.5"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l-3.5-3.5L4 4"></path></svg>
                     </button>
+                    
+                    <div class="w-px h-4 bg-black/10 dark:bg-white/20 mx-1"></div>
+
+                    <div class="flex items-center gap-3">
+                        <button @click="prevTrack()" class="hover:text-blue-500"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M11 19V5l-7 7 7 7zm9 0V5l-7 7 7 7z"></path></svg></button>
+                        
+                        <div class="text-xs font-bold truncate max-w-[100px] text-center cursor-pointer hover:text-blue-500" 
+                             @click="$dispatch('open-music-modal')" 
+                             x-text="music.list[music.currentIdx]?.title || 'Music'"></div>
+                        
+                        <button @click="togglePlay()" class="hover:text-blue-500 hover:scale-110 transition-transform">
+                            <svg x-show="!music.isPlaying" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                            <svg x-show="music.isPlaying" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                        </button>
+                        
+                        <button @click="nextTrack()" class="hover:text-blue-500"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M4 19l7-7-7-7v14zm9-14v14l7-7-7-7z"></path></svg></button>
+                    </div>
                 </div>
 
                 <button @click="showSettings = true" class="hover:rotate-90 transition-transform duration-500 opacity-70 hover:opacity-100 p-2">
@@ -137,7 +159,8 @@
         </div>
     </div>
 
-    <audio x-ref="audioPlayer" :src="music.list[music.currentIdx].url" @ended="nextTrack()" class="hidden"></audio>
+    <audio x-ref="audioPlayer" :src="music.list[music.currentIdx].url" @ended="handleTrackEnd()" class="hidden"></audio>
+    <audio x-ref="pomoAlarm" src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_0625c1539c.mp3" class="hidden"></audio>
 
     <div id="main-content" class="h-full w-full relative z-10">
         {% block content %}{% endblock %}
