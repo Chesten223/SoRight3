@@ -29,7 +29,7 @@
         </button>
     </div>
 
-    <div class="flex-1 flex overflow-hidden relative h-full pt-16">
+    <div class="flex-1 flex overflow-hidden relative mt-16">
         
         {% include 'components/notes_sidebar.html' %}
         
@@ -42,37 +42,99 @@
     {% include 'components/quiz_modals.html' %}
 
     <div x-show="showCreateModal" 
-         class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+         class="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm"
          x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
-         x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
          style="display: none;">
-        
-        <div @click.stop 
-             class="glass-panel p-8 w-full max-w-sm shadow-2xl bg-white dark:bg-slate-800 transform transition-all scale-100 border border-white/10">
-            
+        <div @click.stop class="glass-panel p-8 w-full max-w-sm shadow-2xl bg-white dark:bg-slate-800 transform transition-all scale-100 border border-white/10">
             <h3 class="font-bold text-xl mb-6">Create Item</h3>
-            
             <div class="flex p-1 bg-gray-100 dark:bg-white/5 rounded-xl mb-6">
                 <button @click="newItemType='folder'" class="flex-1 py-2 rounded-lg text-xs font-bold transition-all duration-300" :class="newItemType==='folder' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-500' : 'opacity-50 hover:opacity-100'">Folder</button>
                 <button @click="newItemType='file'" class="flex-1 py-2 rounded-lg text-xs font-bold transition-all duration-300" :class="newItemType==='file' ? 'bg-white dark:bg-slate-700 shadow-sm text-green-500' : 'opacity-50 hover:opacity-100'">Note File</button>
             </div>
-
             <label class="text-xs font-bold opacity-50 uppercase mb-2 block">Name</label>
-            
-            <input type="text" 
-                   x-model="newItemName" 
-                   @keydown.enter.prevent="createItem()"
-                   class="w-full p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-white/5 mb-6 focus:ring-2 focus:ring-blue-500 outline-none font-medium transition-all"
-                   placeholder="Enter name..."
-                   autofocus>
-            
+            <input type="text" x-model="newItemName" @keydown.enter.prevent="createItem()" class="w-full p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-white/5 mb-6 focus:ring-2 focus:ring-blue-500 outline-none font-medium transition-all" placeholder="Enter name..." autofocus>
             <div class="flex gap-3">
                 <button @click="showCreateModal = false" class="flex-1 py-3 bg-gray-100 dark:bg-white/5 rounded-xl font-bold opacity-70 hover:opacity-100 transition-colors">Cancel</button>
                 <button @click="createItem()" class="flex-1 py-3 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 hover:scale-[1.02] transition-all shadow-lg shadow-blue-500/30">Create</button>
             </div>
         </div>
-        
         <div class="absolute inset-0 -z-10" @click="showCreateModal = false"></div>
+    </div>
+
+    <div x-show="contextMenu.show" 
+         @click.away="closeContextMenu()"
+         class="fixed z-[200] w-48 glass-panel bg-white/90 dark:bg-slate-800/90 border border-white/20 shadow-2xl overflow-hidden flex flex-col py-1"
+         :style="`top: ${contextMenu.y}px; left: ${contextMenu.x}px`"
+         style="display: none;">
+         <template x-if="contextMenu.type === 'item'">
+            <div>
+                <button @click="promptRename()" class="w-full text-left px-4 py-2 text-xs font-bold hover:bg-blue-500 hover:text-white transition-colors flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg> Rename
+                </button>
+                <button @click="promptMove()" class="w-full text-left px-4 py-2 text-xs font-bold hover:bg-yellow-500 hover:text-white transition-colors flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg> Move
+                </button>
+                <div class="h-px bg-gray-200 dark:bg-white/10 my-1"></div>
+                <button @click="promptDelete()" class="w-full text-left px-4 py-2 text-xs font-bold hover:bg-red-500 hover:text-white transition-colors text-red-500 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg> Delete
+                </button>
+            </div>
+        </template>
+        <template x-if="contextMenu.type === 'empty'">
+            <div>
+                <div class="px-4 py-1.5 text-[10px] font-black uppercase opacity-40 tracking-widest">Sort By</div>
+                <button @click="sortItems('name')" class="w-full text-left px-4 py-2 text-xs font-bold hover:bg-blue-500 hover:text-white transition-colors flex items-center gap-2"><svg class="w-4 h-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"></path></svg> Name (A-Z)</button>
+                <button @click="sortItems('date')" class="w-full text-left px-4 py-2 text-xs font-bold hover:bg-blue-500 hover:text-white transition-colors flex items-center gap-2"><svg class="w-4 h-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Date Created</button>
+                <div class="h-px bg-gray-200 dark:bg-white/10 my-1"></div>
+                <button @click="showCreateModal = true; closeContextMenu()" class="w-full text-left px-4 py-2 text-xs font-bold hover:bg-green-500 hover:text-white transition-colors text-green-600 dark:text-green-400 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg> New Item</button>
+            </div>
+        </template>
+    </div>
+
+    <div x-show="modals.rename.show" class="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm" x-transition.opacity style="display: none;">
+        <div @click.away="modals.rename.show = false" class="glass-panel p-6 w-full max-w-sm bg-white dark:bg-slate-800 transform transition-all shadow-2xl border border-white/10">
+            <h3 class="font-bold text-lg mb-4">Rename</h3>
+            <input type="text" x-model="modals.rename.newName" @keydown.enter="submitRename()" class="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent mb-4 focus:ring-2 focus:ring-blue-500 outline-none font-medium" autofocus>
+            <div class="flex gap-2">
+                <button @click="modals.rename.show = false" class="flex-1 py-2 bg-gray-100 dark:bg-white/10 rounded-lg font-bold opacity-70 hover:opacity-100">Cancel</button>
+                <button @click="submitRename()" class="flex-1 py-2 bg-blue-500 text-white rounded-lg font-bold hover:bg-blue-600 shadow-lg">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div x-show="modals.move.show" class="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm" x-transition.opacity style="display: none;">
+        <div @click.away="modals.move.show = false" class="glass-panel p-6 w-full max-w-md bg-white dark:bg-slate-800 transform transition-all shadow-2xl flex flex-col max-h-[60vh] border border-white/10">
+            <h3 class="font-bold text-lg mb-1">Move Item</h3>
+            <p class="text-xs opacity-50 mb-4">Select destination folder:</p>
+            <div class="flex-1 overflow-y-auto border border-gray-200 dark:border-white/10 rounded-xl p-2 mb-4 bg-gray-50 dark:bg-black/20 min-h-[200px]">
+                <div x-show="modals.move.breadcrumbs.length > 0" @click="loadMoveFolder(modals.move.breadcrumbs[modals.move.breadcrumbs.length - 1].id)" class="p-2 rounded-lg cursor-pointer hover:bg-white/10 flex items-center gap-2 opacity-60 hover:opacity-100 text-xs font-bold mb-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg> Back to parent
+                </div>
+                <template x-for="folder in modals.move.currentFolders" :key="folder.id">
+                    <div @click="selectMoveTarget(folder)" class="p-3 rounded-lg cursor-pointer flex items-center gap-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 border border-transparent" :class="modals.move.selectedTarget === folder.id ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''">
+                         <svg class="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"></path></svg>
+                         <span class="text-sm font-bold" x-text="folder.name"></span>
+                         <button @click.stop="loadMoveFolder(folder.id)" class="ml-auto p-1 hover:bg-black/10 rounded"><svg class="w-4 h-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
+                    </div>
+                </template>
+                <div x-show="modals.move.currentFolders.length === 0" class="text-center p-4 opacity-50 text-xs">No subfolders</div>
+            </div>
+            <div class="flex gap-2">
+                <button @click="modals.move.show = false" class="flex-1 py-2 bg-gray-100 dark:bg-white/10 rounded-lg font-bold opacity-70 hover:opacity-100">Cancel</button>
+                <button @click="submitMove()" :disabled="!modals.move.selectedTarget" class="flex-1 py-2 bg-blue-500 text-white rounded-lg font-bold hover:bg-blue-600 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">Move Here</button>
+            </div>
+        </div>
+    </div>
+
+    <div x-show="modals.delete.show" class="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm" x-transition.opacity style="display: none;">
+        <div @click.away="modals.delete.show = false" class="glass-panel p-6 w-full max-w-sm bg-white dark:bg-slate-800 transform transition-all shadow-2xl border border-white/10">
+            <h3 class="font-bold text-lg mb-2 text-red-500">Delete Item?</h3>
+            <p class="opacity-70 mb-6 text-sm">Are you sure you want to delete "<span x-text="modals.delete.item?.name"></span>"?</p>
+            <div class="flex gap-2">
+                <button @click="modals.delete.show = false" class="flex-1 py-2 bg-gray-100 dark:bg-white/10 rounded-lg font-bold opacity-70 hover:opacity-100">Cancel</button>
+                <button @click="submitDelete()" class="flex-1 py-2 bg-red-500 text-white rounded-lg font-bold hover:bg-red-600 shadow-lg">Delete</button>
+            </div>
+        </div>
     </div>
 
 </div>

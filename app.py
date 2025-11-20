@@ -113,5 +113,31 @@ def api_notes_save():
     if service.save_note_content(note_id, content): return jsonify({"success": True})
     return jsonify({"success": False, "msg": "Failed"})
 
+@app.route('/api/notes/rename', methods=['POST'])
+def api_notes_rename():
+    data = request.json
+    if service.rename_note_item(data.get('id'), data.get('name')): return jsonify({"success": True})
+    return jsonify({"success": False, "msg": "Failed"})
+
+@app.route('/api/notes/delete', methods=['POST'])
+def api_notes_delete():
+    data = request.json
+    if service.delete_note_item(data.get('id')): return jsonify({"success": True})
+    return jsonify({"success": False, "msg": "Failed"})
+
+@app.route('/api/notes/move', methods=['POST'])
+def api_notes_move():
+    data = request.json
+    if service.move_note_item(data.get('id'), data.get('target')): return jsonify({"success": True})
+    return jsonify({"success": False, "msg": "Failed"})
+
+@app.route('/api/notes/reorder', methods=['POST'])
+def api_notes_reorder():
+    data = request.json
+    parent_id = data.get('parent_id')
+    child_ids = data.get('order')
+    if service.reorder_note_children(parent_id, child_ids): return jsonify({"success": True})
+    return jsonify({"success": False, "msg": "Failed"})
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

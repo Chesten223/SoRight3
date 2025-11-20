@@ -21,7 +21,7 @@ html.dark {
     --glass-shadow: rgba(0, 0, 0, 0.3);
 }
 
-/* 基础设置 */
+/* 基础设置 - 移除全局 transition，防止布局抖动 */
 body {
     font-family: 'Inter', sans-serif;
     color: var(--text-primary);
@@ -29,10 +29,10 @@ body {
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
-    transition: color 0.3s, background-color 0.3s;
 }
 
 /* --- 组件类 --- */
+/* 移除 transition，由 Tailwind 的 class (transition-all) 接管控制 */
 .glass-panel {
     background: var(--glass-bg);
     backdrop-filter: blur(24px);
@@ -40,7 +40,6 @@ body {
     border: 1px solid var(--glass-border);
     box-shadow: 0 8px 32px var(--glass-shadow);
     border-radius: 1.5rem;
-    transition: transform 0.2s, box-shadow 0.2s, background 0.3s;
 }
 
 .text-theme { color: rgb(var(--accent)); }
@@ -51,6 +50,12 @@ body {
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+/* 自定义滚动条 (Chrome/Safari/Webkit) - 让滚动条更现代 */
+.custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.5); border-radius: 3px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(107, 114, 128, 0.8); }
+
 /* MathJax 字体修正 */
 mjx-container { font-size: 110% !important; outline: none; }
 .math-content img { border-radius: 8px; margin: 1rem 0; }
@@ -59,12 +64,8 @@ mjx-container { font-size: 110% !important; outline: none; }
 .animate-fade-in { animation: fadeIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-/* --- Notification Toast Animation --- */
-@keyframes borderProgress {
-    0% { border-color: rgba(59, 130, 246, 1); box-shadow: 0 0 15px rgba(59, 130, 246, 0.3); }
-    100% { border-color: rgba(59, 130, 246, 0); box-shadow: 0 0 0 rgba(0,0,0,0); }
-}
-
-.toast-border-anim {
-    animation: borderProgress 2s linear forwards;
+/* 遮罩效果 (用于编辑器顶部工具栏) */
+.mask-image-fade {
+    -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+    mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
 }

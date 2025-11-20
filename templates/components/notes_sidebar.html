@@ -1,5 +1,6 @@
-<div class="w-72 h-full glass-panel ml-4 mb-4 flex flex-col overflow-hidden z-30 border-r border-white/10 relative animate-fade-in transition-all duration-500 ease-spring">
-    <div class="p-5 border-b border-white/10 bg-white/5 flex justify-between items-center backdrop-blur-md">
+<div class="w-72 h-[calc(100%-2rem)] glass-panel ml-6 my-4 flex flex-col overflow-hidden z-30 border-r border-white/10 relative animate-fade-in shadow-2xl transform-gpu">
+    
+    <div class="p-5 border-b border-white/10 bg-white/5 flex justify-between items-center backdrop-blur-md shrink-0">
         <div>
             <h3 class="font-bold text-lg truncate max-w-[150px]" x-text="viewData.breadcrumbs[viewData.breadcrumbs.length-1]?.name || 'Library'"></h3>
             <div class="flex items-center gap-2 mt-1">
@@ -12,7 +13,9 @@
         </button>
     </div>
 
-    <div class="flex-1 overflow-y-auto p-3 space-y-2 no-scrollbar">
+    <div class="flex-1 overflow-y-auto p-3 space-y-2 no-scrollbar relative" 
+         @click="closeContextMenu()"
+         @contextmenu.prevent.stop="openEmptyContextMenu($event)">
         
         <div x-show="viewData.breadcrumbs.length > 1" 
              @click="loadNote(viewData.breadcrumbs[viewData.breadcrumbs.length - 2].id)"
@@ -21,28 +24,37 @@
             Back
         </div>
 
-        <template x-for="item in viewData.items" :key="item.id">
-            <div @click="loadNote(item.id)" 
-                 class="p-3 rounded-xl cursor-pointer transition-all duration-300 ease-spring flex items-center gap-3 border border-transparent group hover:scale-[1.02] hover:shadow-md"
-                 :class="viewData.info.id === item.id ? 'bg-blue-500 text-white shadow-lg' : 'hover:bg-white/40 dark:hover:bg-white/10 hover:border-white/20'">
+        <template x-for="(item, index) in viewData.items" :key="item.id">
+            <div draggable="true"
+                 @dragstart="handleDragStart($event, item, index)"
+                 @dragover.prevent="handleDragOver($event, index)"
+                 @drop="handleDrop($event, index)"
+                 @dragend="handleDragEnd()"
+                 @click="loadNote(item.id)" 
+                 @contextmenu.prevent.stop="openContextMenu($event, item)"
+                 class="p-3 rounded-xl cursor-pointer transition-all duration-300 ease-spring flex items-center gap-3 border border-transparent group hover:scale-[1.02] hover:shadow-md select-none"
+                 :class="[
+                    viewData.info.id === item.id ? 'bg-blue-500 text-white shadow-lg' : 'hover:bg-white/40 dark:hover:bg-white/10 hover:border-white/20',
+                    dragState.draggingId === item.id ? 'opacity-50 scale-95 border-dashed border-blue-500' : ''
+                 ]">
                 
-                <div class="w-8 h-8 rounded-lg flex items-center justify-center transition-colors" 
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center transition-colors pointer-events-none" 
                      :class="viewData.info.id === item.id ? 'bg-white/20 text-white' : (item.type === 'folder' ? 'bg-blue-500/10 text-blue-500 group-hover:bg-blue-500 group-hover:text-white' : 'bg-green-500/10 text-green-600 group-hover:bg-green-500 group-hover:text-white')">
-                     
                      <svg x-show="item.type === 'folder'" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"></path></svg>
                      <svg x-show="item.type === 'file'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 01-2-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                 </div>
                 
-                <div class="flex-1 min-w-0">
+                <div class="flex-1 min-w-0 pointer-events-none">
                     <div class="text-sm font-bold truncate" x-text="item.name"></div>
                     <div class="text-[10px] truncate opacity-60" x-text="item.preview || (item.type === 'folder' ? 'Folder' : 'Empty')"></div>
                 </div>
             </div>
         </template>
         
-        <div x-show="viewData.items.length === 0" class="flex flex-col items-center justify-center p-10 opacity-30">
+        <div x-show="viewData.items.length === 0" class="flex flex-col items-center justify-center p-10 opacity-30 h-40 border-2 border-dashed border-transparent hover:border-white/10 rounded-xl transition-colors">
             <svg class="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
-            <span class="text-xs font-bold">Empty</span>
+            <span class="text-xs font-bold">Right click to manage</span>
         </div>
+        <div class="h-20 w-full" x-show="viewData.items.length > 0"></div>
     </div>
 </div>
