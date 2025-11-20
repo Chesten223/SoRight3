@@ -83,4 +83,4 @@ def api_ai_chat():
     return jsonify({"reply": reply})
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5210)
