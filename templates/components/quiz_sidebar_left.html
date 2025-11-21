@@ -7,12 +7,23 @@
             <div class="w-full h-full glass-panel flex flex-col overflow-hidden shadow-lg transition-none" 
                  @contextmenu.prevent="handleContextMenu($event, null, 'blank')">
                 
-                <div class="p-5 border-b border-white/10 bg-white/5 shrink-0">
-                    <h3 class="font-bold text-lg truncate" x-text="bookData.info?.name || 'Loading...'"></h3>
-                    <div class="flex flex-wrap gap-1 mt-2" x-show="bookData.info?.tags && bookData.info.tags.length > 0">
-                        <template x-for="tag in bookData.info.tags">
-                            <span class="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-500 text-[10px] font-bold uppercase" x-text="tag"></span>
-                        </template>
+                <div class="p-5 border-b border-white/10 bg-white/5 shrink-0 flex justify-between items-start">
+                    <div class="flex-1 min-w-0 mr-2">
+                        <h3 class="font-bold text-lg truncate" x-text="bookData.info?.name || t('loading')"></h3>
+                        <div class="flex flex-wrap gap-1 mt-1">
+                            <template x-for="tag in (bookData.info?.tags || [])">
+                                <span class="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-500 text-[10px] font-bold uppercase" x-text="tag"></span>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-1 bg-white/10 rounded-lg p-1">
+                        <button @click="goBack()" :disabled="historyStack.length === 0" class="p-1.5 rounded-md hover:bg-white/20 transition-colors disabled:opacity-30 disabled:cursor-default">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                        </button>
+                        <button @click="goForward()" :disabled="futureStack.length === 0" class="p-1.5 rounded-md hover:bg-white/20 transition-colors disabled:opacity-30 disabled:cursor-default">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </button>
                     </div>
                 </div>
 

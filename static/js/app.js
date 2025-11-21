@@ -457,6 +457,10 @@ document.addEventListener('alpine:init', () => {
         bookData: { info: {}, stats: {}, sub_notebooks: [], questions: [], breadcrumbs: [] },
         currentQIndex: -1,
         
+        // Navigation History
+        historyStack: [],
+        futureStack: [],
+        isNavigating: false,
         // Notebook Mgmt States
         showCreateModal: false,
         subBookName: '',
@@ -481,6 +485,21 @@ document.addEventListener('alpine:init', () => {
             document.addEventListener('click', () => this.ctxMenu.show = false);
         },
         
+        goBack() {
+            if (this.historyStack.length === 0) return;
+            this.isNavigating = true;
+            this.futureStack.push(this.bookId);
+            const prevId = this.historyStack.pop();
+            this.loadBook(prevId);
+        },
+        goForward() {
+            if (this.futureStack.length === 0) return;
+            this.isNavigating = true;
+            this.historyStack.push(this.bookId);
+            const nextId = this.futureStack.pop();
+            this.loadBook(nextId);
+        },
+
         showToast(titleKey, msgKey) {
             // 简单兼容直接传字符串的情况
             const lang = localStorage.getItem('appLang') || 'zh';
@@ -492,32 +511,25 @@ document.addEventListener('alpine:init', () => {
         },
 
         async loadBook(targetId) {
-            this.loading = true; // 1. 立即开启 loading 遮罩
+            // --- History Logic Start ---
+            if (!this.isNavigating && this.bookId && this.bookId !== targetId) {
+                this.historyStack.push(this.bookId);
+                this.futureStack = [];
+            }
+            this.isNavigating = false;
+            // --- History Logic End ---
+
+            this.loading = true;
             this.bookId = targetId;
             this.currentQIndex = -1; 
             
-            // 2. [关键] 立即清空旧数据，防止渲染残留导致列表跳变
-            this.bookData = { 
-                info: { name: 'Loading...' }, 
-                stats: {}, 
-                sub_notebooks: [], 
-                questions: [], 
-                breadcrumbs: [] 
-            };
+            this.bookData = { info: { name: 'Loading...' }, stats: {}, sub_notebooks: [], questions: [], breadcrumbs: [] };
 
             try {
                 const res = await fetch(`/api/book_details?book=${targetId}`);
-                if (!res.ok) throw new Error("Failed to load");
-                
-                // 3. 数据回来后一次性更新
                 this.bookData = await res.json();
-            } catch(e) { 
-                console.error(e); 
-                this.showToast("Error", "Failed to load notebook");
-            } finally { 
-                // 4. 稍微延迟关闭 loading，让渲染更平滑（可选）
-                setTimeout(() => { this.loading = false; }, 50);
-            }
+            } catch(e) { console.error(e); }
+            finally { this.loading = false; }
         },
 
         // --- Drag & Drop Logic ---
@@ -696,6 +708,11 @@ document.addEventListener('alpine:init', () => {
         editorContent: '',
         renderedContent: '',
         viewMode: 'read', 
+
+        // Navigation History
+        historyStack: [],
+        futureStack: [],
+        isNavigating: false,
         
         // UI States
         showCreateModal: false,
@@ -766,6 +783,21 @@ document.addEventListener('alpine:init', () => {
             await this.loadNote(this.noteId);
         },
 
+        goBack() {
+            if (this.historyStack.length === 0) return;
+            this.isNavigating = true;
+            this.futureStack.push(this.noteId);
+            const prevId = this.historyStack.pop();
+            this.loadNote(prevId);
+        },
+        goForward() {
+            if (this.futureStack.length === 0) return;
+            this.isNavigating = true;
+            this.historyStack.push(this.noteId);
+            const nextId = this.futureStack.pop();
+            this.loadNote(nextId);
+        },
+
         showToast(title, msg) {
              this.notify.title = title; this.notify.msg = msg; this.notify.show = true;
              setTimeout(() => this.notify.show = false, 2000);
@@ -780,6 +812,15 @@ document.addEventListener('alpine:init', () => {
         },
 
         async loadNote(id) {
+            // --- History Logic Start ---
+            // 如果不是通过前进/后退触发的跳转，且 ID 确实改变了，则记录历史
+            if (!this.isNavigating && this.noteId && this.noteId !== id) {
+                this.historyStack.push(this.noteId);
+                this.futureStack = []; // 新的跳转会清空“未来”
+            }
+            this.isNavigating = false; // 重置标记
+            // --- History Logic End ---
+
             this.noteId = id;
             const res = await fetch(`/api/notes/view?id=${id}`);
             this.viewData = await res.json();
