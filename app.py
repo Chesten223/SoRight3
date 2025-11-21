@@ -133,6 +133,43 @@ def register():
             
     return render_template('register.html')
 
+@app.route('/api/question/move', methods=['POST'])
+@login_required
+def api_question_move():
+    d = request.json
+    if service.move_question_to_book(d.get('q_id'), d.get('from_book'), d.get('to_book')):
+        return jsonify({"success": True})
+    return jsonify({"success": False, "msg": "Failed to move"})
+
+@app.route('/api/question/update_tags', methods=['POST'])
+@login_required
+def api_question_update_tags():
+    d = request.json
+    tags = [t.strip() for t in d.get('tags', '').split(',') if t.strip()]
+    if service.update_question_tags(d.get('q_id'), tags):
+        return jsonify({"success": True})
+    return jsonify({"success": False, "msg": "Failed"})
+
+@app.route('/api/question/remove', methods=['POST'])
+@login_required
+def api_question_remove():
+    d = request.json
+    if service.remove_question_from_book(d.get('book_id'), d.get('q_id')):
+        return jsonify({"success": True})
+    return jsonify({"success": False})
+# 在 app.py 的 API 区域添加/确认以下路由
+
+@app.route('/api/question/copy', methods=['POST'])
+@login_required
+def api_question_copy():
+    d = request.json
+    # q_id, to_book (from_book 不需要，因为是复制)
+    if service.copy_question_to_book(d.get('q_id'), d.get('to_book')):
+        return jsonify({"success": True})
+    return jsonify({"success": False, "msg": "Failed to copy"})
+
+# 确认 update_tags 路由存在 (原文件中已有，无需修改，确保没删即可)
+# @app.route('/api/question/update_tags', methods=['POST']) ...
 @app.route('/logout')
 @login_required
 def logout():

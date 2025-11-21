@@ -94,7 +94,7 @@
 <div x-show="ctxMenu.show" 
      @click.stop
      x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
-     class="fixed z-[999] min-w-[160px] glass-panel shadow-2xl border border-white/20 overflow-hidden flex flex-col py-1"
+     class="fixed z-[999] min-w-[180px] glass-panel shadow-2xl border border-white/20 overflow-hidden flex flex-col py-1"
      :style="`top: ${ctxMenu.y}px; left: ${ctxMenu.x}px`"
      style="display: none;">
      
@@ -105,10 +105,21 @@
              <button @click="openRenameModal()" x-show="ctxMenu.type === 'folder'" class="w-full px-4 py-2 text-sm font-bold text-left hover:bg-blue-500 hover:text-white transition-colors flex items-center gap-3">
                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg> Rename
              </button>
-             <button @click="openMoveModal()" x-show="ctxMenu.type === 'folder'" class="w-full px-4 py-2 text-sm font-bold text-left hover:bg-blue-500 hover:text-white transition-colors flex items-center gap-3">
+
+             <button @click="openMoveModal('move')" class="w-full px-4 py-2 text-sm font-bold text-left hover:bg-blue-500 hover:text-white transition-colors flex items-center gap-3">
                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg> Move to...
              </button>
+
+             <button @click="openMoveModal('copy')" x-show="ctxMenu.type === 'question'" class="w-full px-4 py-2 text-sm font-bold text-left hover:bg-green-500 hover:text-white transition-colors flex items-center gap-3">
+                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg> Copy to...
+             </button>
+
+             <button @click="openTagsModal()" x-show="ctxMenu.type === 'question'" class="w-full px-4 py-2 text-sm font-bold text-left hover:bg-purple-500 hover:text-white transition-colors flex items-center gap-3">
+                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg> Edit Tags
+             </button>
+
              <div class="h-px bg-white/10 my-1"></div>
+             
              <button @click="deleteItem()" class="w-full px-4 py-2 text-sm font-bold text-left hover:bg-red-500 hover:text-white text-red-500 transition-colors flex items-center gap-3">
                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg> Delete
              </button>
@@ -138,7 +149,7 @@
 <div x-show="moveModal.show" class="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 backdrop-blur-sm" style="display: none;">
     <div @click.away="moveModal.show = false" class="glass-panel w-full max-w-md h-[500px] flex flex-col shadow-2xl bg-white dark:bg-slate-800 transform transition-all scale-100">
         <div class="p-4 border-b border-white/10 flex justify-between items-center">
-            <h3 class="font-bold text-lg">Move to...</h3>
+            <h3 class="font-bold text-lg" x-text="moveAction === 'copy' ? 'Copy to...' : 'Move to...'">Move to...</h3>
             <button @click="moveModal.show = false" class="p-1 hover:bg-white/10 rounded-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
         </div>
         <div class="px-4 py-2 flex gap-1 text-xs opacity-60 border-b border-white/5 overflow-x-auto no-scrollbar">
@@ -160,7 +171,7 @@
         </div>
         <div class="p-4 border-t border-white/10 bg-gray-50 dark:bg-black/20 flex justify-between items-center">
             <div class="text-xs opacity-50">Current: <span x-text="moveModal.currentPath[moveModal.currentPath.length-1]?.name"></span></div>
-            <button @click="confirmMove()" class="px-6 py-2 bg-blue-500 text-white rounded-lg font-bold hover:bg-blue-600 transition-colors shadow-lg">Move Here</button>
+            <button @click="confirmMove()" class="px-6 py-2 bg-blue-500 text-white rounded-lg font-bold hover:bg-blue-600 transition-colors shadow-lg" x-text="moveAction === 'copy' ? 'Copy Here' : 'Move Here'">Move Here</button>
         </div>
     </div>
 </div>
@@ -223,6 +234,18 @@
                 </div>
             </template>
             <div x-show="pickerData.sub_notebooks.length === 0 && pickerData.questions.length === 0" class="text-center p-8 opacity-50">Empty Folder</div>
+        </div>
+    </div>
+</div>
+
+<div x-show="tagsModal.show" class="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 backdrop-blur-sm" style="display: none;">
+    <div @click.away="tagsModal.show = false" class="glass-panel p-6 w-full max-w-sm shadow-2xl bg-white dark:bg-slate-800 transform transition-all scale-100">
+        <h3 class="font-bold text-lg mb-4">Edit Tags</h3>
+        <div class="text-xs opacity-50 mb-2">Separate with commas (e.g. Math, Hard)</div>
+        <input type="text" x-model="tagsModal.tags" @keydown.enter="confirmTags()" class="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent mb-4 focus:ring-2 focus:ring-blue-500 outline-none font-bold" autofocus>
+        <div class="flex gap-2">
+            <button @click="tagsModal.show = false" class="flex-1 py-2 bg-gray-100 dark:bg-white/10 rounded-lg font-bold opacity-70 hover:opacity-100">Cancel</button>
+            <button @click="confirmTags()" class="flex-1 py-2 bg-blue-500 text-white rounded-lg font-bold hover:bg-blue-600">Save</button>
         </div>
     </div>
 </div>

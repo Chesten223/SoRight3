@@ -355,6 +355,71 @@ $$ i\\hbar\\frac{\\partial}{\\partial t}\\psi = \\hat{H}\\psi $$
 
     # ================= 错题本逻辑 (Mistake Notebooks) =================
 
+
+
+    # --- [NEW] 题目管理 (移动/复制/标签) ---
+
+    def move_question_to_book(self, q_id, from_book_id, to_book_id):
+        """移动题目：从旧本子移除 -> 加入新本子"""
+        user = self._get_user()
+        if from_book_id == to_book_id: return False
+        
+        # 1. 获取两个本子
+        old_book = db.session.get(Notebook, from_book_id)
+        new_book = db.session.get(Notebook, to_book_id)
+        question = db.session.get(Question, q_id)
+        
+        if not (old_book and new_book and question): return False
+        if old_book.user_id != user.id or new_book.user_id != user.id: return False
+        
+        # 2. 执行移动
+        if question in old_book.questions:
+            old_book.questions.remove(question)
+        if question not in new_book.questions:
+            new_book.questions.append(question)
+            
+        db.session.commit()
+        return True
+
+    # 2. [NEW] 新增复制逻辑 (保留在源本子，同时加入目标本子)
+    def copy_question_to_book(self, q_id, to_book_id):
+        user = self._get_user()
+        new_book = db.session.get(Notebook, to_book_id)
+        question = db.session.get(Question, q_id)
+        
+        if not (new_book and question): return False
+        if new_book.user_id != user.id: return False
+        
+        if question not in new_book.questions:
+            new_book.questions.append(question)
+            db.session.commit()
+            return True
+        return True # 已经在里面了也算成功
+
+    def update_question_tags(self, q_id, new_tags):
+        """更新题目标签"""
+        # 注意：因为题目是共享的，修改标签会影响所有包含该题目的本子
+        # 如果你想只修改当前本子的标签，那逻辑会极其复杂。这里默认修改题目全局标签。
+        question = db.session.get(Question, q_id)
+        if question:
+            question.tags = new_tags
+            db.session.commit()
+            return True
+        return False
+    
+    def remove_question_from_book(self, book_id, q_id):
+        """从本子中移除题目 (不删除题目本身)"""
+        user = self._get_user()
+        book = db.session.get(Notebook, book_id)
+        question = db.session.get(Question, q_id)
+        
+        if book and question and book.user_id == user.id:
+            if question in book.questions:
+                book.questions.remove(question)
+                db.session.commit()
+                return True
+        return False
+
     def get_notebook_view(self, notebook_id="root"):
         user = self._get_user()
         

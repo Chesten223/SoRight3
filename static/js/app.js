@@ -441,7 +441,7 @@ document.addEventListener('alpine:init', () => {
         isFav(track) { return Alpine.store('musicStore').favorites.includes(track.url); }
     }));
 
-    // --- 6. Quiz App (Enhanced: Notebook Mgmt & Related Notes) ---
+    // --- 6. Quiz App (Enhanced: Move/Copy/Tags) ---
     Alpine.data('quizApp', (mode, book) => ({
         mode: mode,
         bookId: book,
@@ -461,6 +461,7 @@ document.addEventListener('alpine:init', () => {
         historyStack: [],
         futureStack: [],
         isNavigating: false,
+        
         // Notebook Mgmt States
         showCreateModal: false,
         subBookName: '',
@@ -470,8 +471,14 @@ document.addEventListener('alpine:init', () => {
         
         // Context Menu & DragDrop
         ctxMenu: { show: false, x: 0, y: 0, item: null, type: 'folder' }, // 'folder' or 'question'
+        
+        // Modals
         renameModal: { show: false, name: '' },
         moveModal: { show: false, currentPath: [], items: [], targetId: 'root' },
+        tagsModal: { show: false, tags: '' }, // [NEW]
+        
+        moveAction: 'move', // [NEW] 'move' or 'copy'
+        
         dragSource: null, // { type: 'folder'|'question', index: int }
         
         // Related Notes
@@ -511,13 +518,13 @@ document.addEventListener('alpine:init', () => {
         },
 
         async loadBook(targetId) {
-            // --- History Logic Start ---
+            // --- History Logic ---
             if (!this.isNavigating && this.bookId && this.bookId !== targetId) {
                 this.historyStack.push(this.bookId);
                 this.futureStack = [];
             }
             this.isNavigating = false;
-            // --- History Logic End ---
+            // --------------------
 
             this.loading = true;
             this.bookId = targetId;
@@ -540,11 +547,10 @@ document.addEventListener('alpine:init', () => {
         },
         handleDragEnd(e) {
             e.target.classList.remove('opacity-50');
-            // Clean up visual cues
             document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over', 'border-blue-500', 'border-dashed'));
         },
         handleDragOver(e, type, index) {
-            if (!this.dragSource || this.dragSource.type !== type) return; // Only same type sorting
+            if (!this.dragSource || this.dragSource.type !== type) return; 
             e.preventDefault();
             e.currentTarget.classList.add('drag-over', 'border-blue-500', 'border-dashed');
         },
@@ -605,8 +611,7 @@ document.addEventListener('alpine:init', () => {
         // --- Delete ---
         async deleteItem() {
             if(!confirm("Are you sure you want to delete this?")) return;
-            // 如果是文件夹调用 delete_notebook，如果是题目暂未实现（可加 remove 接口）
-            // 暂时只实现文件夹删除
+            
             if (this.ctxMenu.type === 'folder') {
                 const res = await fetch('/api/notebooks/delete', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id: this.ctxMenu.item.id }) });
                 if ((await res.json()).success) {
@@ -614,10 +619,24 @@ document.addEventListener('alpine:init', () => {
                     this.loadBook(this.bookId);
                 }
             }
+            else if (this.ctxMenu.type === 'question') {
+                // 调用移除接口
+                const res = await fetch('/api/question/remove', { 
+                    method: 'POST', 
+                    headers: {'Content-Type': 'application/json'}, 
+                    body: JSON.stringify({ book_id: this.bookId, q_id: this.ctxMenu.item.id }) 
+                });
+                if ((await res.json()).success) { 
+                    this.showToast("Success", "Removed from notebook");
+                    this.ctxMenu.show = false; 
+                    this.loadBook(this.bookId); 
+                }
+            }
         },
 
-        // --- Move (Folders Only for now) ---
-        async openMoveModal() {
+        // --- Move & Copy Logic (Enhanced) ---
+        async openMoveModal(action = 'move') {
+            this.moveAction = action; // 'move' or 'copy'
             this.ctxMenu.show = false;
             this.moveModal.show = true;
             await this.loadMovePicker('root');
@@ -630,43 +649,76 @@ document.addEventListener('alpine:init', () => {
             this.moveModal.targetId = folderId;
         },
         async confirmMove() { 
-            // 1. 校验参数
-            if (!this.ctxMenu.item) {
-                alert("No item selected");
-                return;
-            }
-            // 目标文件夹 ID
-            const targetId = this.moveModal.targetId;
-            // 当前项目 ID
+            if (!this.ctxMenu.item) return;
+            
+            const targetBookId = this.moveModal.targetId;
             const itemId = this.ctxMenu.item.id;
 
-            if (targetId === itemId) return; // 不能移给自己
-            
-            // 2. 发送请求
-            const res = await fetch('/api/notes/move', { 
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify({ 
-                    id: itemId, 
-                    parent: targetId 
-                }) 
-            }); 
-            
+            // 1. Folder Move
+            if (this.ctxMenu.type === 'folder') {
+                if (targetBookId === itemId) return;
+                const res = await fetch('/api/notebooks/move', { // Fixed API endpoint
+                    method: 'POST', 
+                    headers: {'Content-Type': 'application/json'}, 
+                    body: JSON.stringify({ id: itemId, parent: targetBookId }) 
+                });
+                const d = await res.json();
+                if(d.success) {
+                    this.showToast("Success", "Folder moved");
+                    this.moveModal.show = false;
+                    this.loadBook(this.bookId); 
+                } else {
+                    alert(d.msg || "Move failed");
+                }
+            }
+            // 2. Question Move / Copy
+            else if (this.ctxMenu.type === 'question') {
+                let url = '/api/question/move';
+                let body = { q_id: itemId, from_book: this.bookId, to_book: targetBookId };
+
+                if (this.moveAction === 'copy') {
+                    url = '/api/question/copy';
+                    body = { q_id: itemId, to_book: targetBookId };
+                }
+
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(body)
+                });
+                const d = await res.json();
+                
+                if(d.success) {
+                    this.showToast("Success", this.moveAction === 'move' ? "Question moved" : "Question copied");
+                    this.moveModal.show = false;
+                    this.loadBook(this.bookId);
+                } else {
+                    alert(d.msg || "Operation failed");
+                }
+            }
+        },
+
+        // --- Edit Tags Logic (New) ---
+        openTagsModal() {
+            const currentTags = this.ctxMenu.item.tags || [];
+            this.tagsModal.tags = currentTags.join(', ');
+            this.tagsModal.show = true;
+            this.ctxMenu.show = false;
+        },
+        async confirmTags() {
+            const qId = this.ctxMenu.item.id;
+            const res = await fetch('/api/question/update_tags', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ q_id: qId, tags: this.tagsModal.tags })
+            });
             const d = await res.json();
-            
-            // 3. 处理结果
-            if(d.success) { 
-                this.showToast("Success", "Item moved"); 
-                
-                // 关闭所有相关弹窗
-                this.moveModal.show = false; 
-                this.ctxMenu.show = false;
-                
-                // 4. 关键：刷新视图
-                // 重新加载当前正在浏览的页面，以移除已移走的项目
-                await this.loadNote(this.noteId); 
+            if (d.success) {
+                this.showToast("Success", "Tags updated");
+                this.tagsModal.show = false;
+                this.loadBook(this.bookId);
             } else {
-                alert(d.msg || "Move failed");
+                alert("Failed to update tags");
             }
         },
 
@@ -678,7 +730,7 @@ document.addEventListener('alpine:init', () => {
             this.relatedNotes = await res.json();
         },
         
-        // --- Standard Quiz Functions (Modified) ---
+        // --- Standard Quiz Functions ---
         async jumpToQuestion(index) {
             this.currentQIndex = index;
             await this.loadNext(this.bookData.questions[index].id);
@@ -686,11 +738,16 @@ document.addEventListener('alpine:init', () => {
         async loadNext(targetId=null) {
             this.loading = true;
             this.showExplanation = false;
-            this.relatedNotes = []; // Clear previous notes
+            this.relatedNotes = [];
             
             if (this.mode === 'mistake' && !targetId) {
                 this.currentQIndex++;
-                if (this.currentQIndex >= this.bookData.questions.length) { this.showToast('toast_complete', 'toast_finished'); this.currentQIndex = -1; this.loading = false; return; }
+                if (this.currentQIndex >= this.bookData.questions.length) { 
+                    this.showToast('toast_complete', 'toast_finished'); 
+                    this.currentQIndex = -1; 
+                    this.loading = false; 
+                    return; 
+                }
                 targetId = this.bookData.questions[this.currentQIndex].id;
             }
             setTimeout(async () => {
@@ -700,10 +757,20 @@ document.addEventListener('alpine:init', () => {
                 if (this.mode === 'mistake') url += `&book=${this.bookId}`;
                 try {
                     const res = await fetch(url);
-                    if(!res.ok) { if(this.mode === 'mistake') { this.showToast('toast_empty', 'toast_no_qs'); this.currentQIndex = -1; return; } alert("Error"); return; }
+                    if(!res.ok) { 
+                        if(this.mode === 'mistake') { 
+                            this.showToast('toast_empty', 'toast_no_qs'); 
+                            this.currentQIndex = -1; 
+                            return; 
+                        } 
+                        alert("Error"); return; 
+                    }
                     this.question = await res.json();
                 } catch(e) { console.error(e); }
-                finally { this.loading = false; this.$nextTick(() => { if(window.MathJax) MathJax.typesetPromise(); }); }
+                finally { 
+                    this.loading = false; 
+                    this.$nextTick(() => { if(window.MathJax) MathJax.typesetPromise(); }); 
+                }
             }, 300);
         },
         
@@ -714,22 +781,12 @@ document.addEventListener('alpine:init', () => {
             this.submitted = true;
             this.$nextTick(() => { if(window.MathJax) MathJax.typesetPromise(); });
             
-            // Fetch related notes immediately upon submission (so they are ready when Analysis is clicked)
             this.fetchRelatedNotes();
             
             if (!this.feedback.is_correct) setTimeout(() => { this.showExplanation = true; }, 800);
         },
         
-        async fetchRelatedNotes() {
-            this.relatedNotes = [];
-            if (!this.question.id) return;
-            try {
-                const res = await fetch(`/api/get_related_notes?q_id=${this.question.id}`);
-                this.relatedNotes = await res.json();
-            } catch(e) { console.error(e); }
-        },
-
-        // ... (Helpers: getOptionClass, toggleAI, etc. keep unchanged) ...
+        // --- Helpers ---
         getOptionClass(id) { let base = 'backdrop-blur-md shadow-sm transition-all duration-200 cursor-pointer overflow-hidden border border-transparent hover:scale-[1.01] active:scale-[0.99] '; let theme = 'bg-white/70 hover:bg-white/90 dark:bg-black/20 dark:hover:bg-white/5 dark:border-gray-700 '; if (this.selectedOption === id && !this.submitted) return 'bg-blue-500/10 border-blue-500 text-blue-700 dark:text-blue-400 ring-1 ring-blue-500 shadow-md ' + base; if (this.submitted) { if (id === this.feedback.correct_id) return 'bg-green-500/20 border-green-500 text-green-800 dark:text-green-400 ' + base; if (id === this.selectedOption) return 'bg-red-500/20 border-red-500 text-red-800 dark:text-red-400 ' + base; return theme + 'opacity-40 grayscale ' + base; } return theme + base; },
         getOptionCircleClass(id) { if (this.selectedOption === id && !this.submitted) return 'border-blue-500 text-blue-500 bg-transparent'; if (this.submitted && id === this.feedback.correct_id) return 'border-green-500 bg-green-500 text-white'; if (this.submitted && id === this.selectedOption) return 'border-red-500 bg-red-500 text-white'; return 'border-gray-300 dark:border-gray-600 text-gray-400'; },
         async openAddToBookModal() { const res = await fetch('/api/get_notebooks'); this.notebooksList = await res.json(); this.showAddToBookModal = true; },
