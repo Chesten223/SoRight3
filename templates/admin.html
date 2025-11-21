@@ -1,0 +1,118 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="min-h-screen p-8 flex justify-center" x-data="adminApp">
+    <div class="w-full max-w-6xl space-y-8">
+        
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-4xl font-black mb-2">Admin Dashboard</h1>
+                <p class="opacity-60">Manage users and access codes.</p>
+            </div>
+            <a href="/" class="px-6 py-3 bg-gray-100 dark:bg-white/10 rounded-xl font-bold hover:bg-gray-200 transition-colors">Back to App</a>
+        </div>
+
+        <div class="glass-panel p-8">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">Invitation Codes</h2>
+                <button @click="generateCode()" class="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-transform active:scale-95">
+                    + Generate New Code
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {% for code in codes %}
+                <div class="p-4 rounded-xl bg-white/50 dark:bg-white/5 border border-blue-500/30 flex flex-col items-center justify-center relative group cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                     @click="copyCode('{{ code.code }}')">
+                    <div class="text-2xl font-mono font-black tracking-widest text-blue-600 dark:text-blue-400">{{ code.code }}</div>
+                    <div class="text-xs opacity-50 mt-2">Unused</div>
+                    <div class="absolute inset-0 flex items-center justify-center bg-blue-500 text-white font-bold opacity-0 group-hover:opacity-100 transition-opacity rounded-xl">Copy</div>
+                </div>
+                {% else %}
+                <div class="col-span-full text-center py-8 opacity-50">No active codes. Generate one to invite users.</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="glass-panel p-8">
+            <h2 class="text-2xl font-bold mb-6">User Management</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-gray-200 dark:border-white/10 text-xs uppercase opacity-50">
+                            <th class="py-4 px-4">User</th>
+                            <th class="py-4 px-4">Role</th>
+                            <th class="py-4 px-4">Status</th>
+                            <th class="py-4 px-4">Joined</th>
+                            <th class="py-4 px-4 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in users %}
+                        <tr class="border-b border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                            <td class="py-4 px-4 font-bold">{{ u.username }}</td>
+                            <td class="py-4 px-4">
+                                {% if u.is_admin %}
+                                <span class="px-2 py-1 rounded bg-purple-500/10 text-purple-500 text-xs font-black uppercase">Admin</span>
+                                {% else %}
+                                <span class="px-2 py-1 rounded bg-gray-200 dark:bg-white/10 text-xs font-bold uppercase opacity-60">User</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-4 px-4">
+                                {% if u.is_active %}
+                                <span class="text-green-500 font-bold text-xs">Active</span>
+                                {% else %}
+                                <span class="text-red-500 font-bold text-xs">Banned</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-4 px-4 text-sm opacity-60 font-mono">{{ u.created_at.strftime('%Y-%m-%d') }}</td>
+                            <td class="py-4 px-4 text-right">
+                                {% if u.id != user.id %}
+                                <button @click="toggleBan('{{ u.id }}')" class="px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors hover:bg-red-500 hover:text-white border-red-200 dark:border-red-500/30 text-red-500">
+                                    {% if u.is_active %}Ban User{% else %}Unban{% endif %}
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('adminApp', () => ({
+            async generateCode() {
+                const res = await fetch('/admin/generate_code', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                if (data.success) location.reload();
+                else alert('Error generating code');
+            },
+            
+            copyCode(code) {
+                navigator.clipboard.writeText(code).then(() => {
+                    alert('Code copied: ' + code);
+                });
+            },
+            
+            async toggleBan(uid) {
+                if(!confirm('Change status for this user?')) return;
+                const res = await fetch(`/admin/toggle_user/${uid}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                if (data.success) location.reload();
+                else alert(data.msg || 'Operation failed');
+            }
+        }))
+    })
+</script>
+{% endblock %}

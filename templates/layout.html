@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Physics Pro</title>
     
     <script>
@@ -33,11 +34,12 @@
     
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    
     <script>MathJax = { tex: {inlineMath: [['$', '$']]}, svg: {fontCache: 'global'} };</script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
     
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
@@ -45,6 +47,29 @@
 
 <body class="h-screen w-screen overflow-hidden antialiased font-sans text-slate-900 dark:text-slate-100"
       x-data="globalApp()" x-init="initGlobal()">
+
+    <script>
+        (function() {
+            const originalFetch = window.fetch;
+            window.fetch = function(url, options) {
+                options = options || {};
+                const method = (options.method || 'GET').toUpperCase();
+                if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+                    const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                    if (!options.headers) options.headers = {};
+                    if (options.headers instanceof Headers) {
+                        options.headers.append('X-CSRFToken', token);
+                    } else {
+                        options.headers['X-CSRFToken'] = token;
+                    }
+                }
+                return originalFetch(url, options);
+            };
+            document.body.addEventListener('htmx:configRequest', function(evt) {
+                evt.detail.headers['X-CSRFToken'] = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            });
+        })();
+    </script>
 
     <div class="fixed inset-0 z-[-1] transition-all duration-1000 ease-in-out bg-cover bg-center bg-no-repeat"
          :style="settings.bgImage ? `background-image: url('${settings.bgImage}')` : ''"
@@ -54,8 +79,7 @@
     <div class="fixed inset-0 pointer-events-none z-0 transition-colors duration-500"
          :class="settings.mode === 'dark' ? 'bg-black/60' : 'bg-white/30'"></div>
 
-    <div class="fixed top-0 left-1/2 -translate-x-1/2 w-2/3 h-6 z-[70] cursor-s-resize" 
-         @mouseenter="barOpen = true"></div>
+    <div class="fixed top-0 left-1/2 -translate-x-1/2 w-2/3 h-6 z-[70] cursor-s-resize" @mouseenter="barOpen = true"></div>
 
     <div class="fixed top-0 left-0 w-full z-[60] transition-transform duration-500 ease-spring transform pointer-events-none"
          :class="(barOpen || pomo.active) ? 'translate-y-0' : '-translate-y-full'"
@@ -68,9 +92,7 @@
                     <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold shadow-lg group-hover:scale-110 transition-transform ease-spring duration-300">P</div>
                     <span class="font-bold text-xl tracking-tight hidden md:block">Physics Pro</span>
                 </a>
-
                 <span class="font-mono text-xl opacity-70 tracking-wider" x-text="timeString"></span>
-
                 <div x-show="pomo.active" class="flex items-center gap-2 text-red-500 dark:text-red-400 animate-pulse">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     <span x-text="pomoString" class="font-mono font-bold text-xl"></span>
@@ -79,31 +101,22 @@
 
             <div class="flex items-center gap-4">
                 <div class="flex items-center gap-2 bg-gray-100/80 dark:bg-white/10 rounded-full px-4 py-2 backdrop-blur-sm border border-transparent hover:border-white/20 transition-colors">
-                    
-                    <button @click="toggleMusicMode()" class="p-1 opacity-50 hover:opacity-100 hover:scale-110 transition-all" :title="music.mode">
+                    <button @click="toggleMusicMode()" class="p-1 opacity-50 hover:opacity-100 hover:scale-110 transition-all">
                         <svg x-show="music.mode === 'sequence'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                         <svg x-show="music.mode === 'loop'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                         <svg x-show="music.mode === 'shuffle'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.25 19.25L15.5 15.5M19.25 4.75L15.5 8.5m-11 3.5l3.5 3.5 3.5-3.5"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l-3.5-3.5L4 4"></path></svg>
                     </button>
-                    
                     <div class="w-px h-4 bg-black/10 dark:bg-white/20 mx-1"></div>
-
                     <div class="flex items-center gap-3">
                         <button @click="prevTrack()" class="hover:text-blue-500"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M11 19V5l-7 7 7 7zm9 0V5l-7 7 7 7z"></path></svg></button>
-                        
-                        <div class="text-xs font-bold truncate max-w-[100px] text-center cursor-pointer hover:text-blue-500" 
-                             @click="$dispatch('open-music-modal')" 
-                             x-text="music.list[music.currentIdx]?.title || 'Music'"></div>
-                        
+                        <div class="text-xs font-bold truncate max-w-[100px] text-center cursor-pointer hover:text-blue-500" @click="$dispatch('open-music-modal')" x-text="music.list[music.currentIdx]?.title || 'Music'"></div>
                         <button @click="togglePlay()" class="hover:text-blue-500 hover:scale-110 transition-transform">
                             <svg x-show="!music.isPlaying" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                             <svg x-show="music.isPlaying" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
                         </button>
-                        
                         <button @click="nextTrack()" class="hover:text-blue-500"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M4 19l7-7-7-7v14zm9-14v14l7-7-7-7z"></path></svg></button>
                     </div>
                 </div>
-
                 <button @click="showSettings = true" class="hover:rotate-90 transition-transform duration-500 opacity-70 hover:opacity-100 p-2">
                     <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                 </button>
@@ -111,52 +124,184 @@
         </div>
     </div>
 
-    <div x-show="showSettings" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md" 
-         x-transition:enter="transition ease-spring duration-500"
-         x-transition:enter-start="opacity-0 scale-90"
-         x-transition:enter-end="opacity-100 scale-100"
-         x-transition:leave="transition ease-in duration-200"
-         x-transition:leave-start="opacity-100 scale-100"
-         x-transition:leave-end="opacity-0 scale-90"
+    <div x-show="showSettings" 
+         x-data="{ 
+             activeTab: 'account', 
+             changePassMode: false, 
+             oldPass: '', newPass: '',
+             nickname: '{{ current_user.display_name }}',
+             
+             // Cropper States
+             cropper: null,
+             cropperImage: '',
+             showCropperModal: false,
+             avatarFile: null,
+
+             initCropper(imgUrl) {
+                 this.showCropperModal = true;
+                 this.cropperImage = imgUrl;
+                 this.$nextTick(() => {
+                     if(this.cropper) this.cropper.destroy();
+                     const image = document.getElementById('image-to-crop');
+                     image.src = imgUrl;
+                     this.cropper = new Cropper(image, {
+                         aspectRatio: 1,
+                         viewMode: 1,
+                         minContainerWidth: 300,
+                         minContainerHeight: 300
+                     });
+                 });
+             },
+             
+             onFileChange(e) {
+                 const file = e.target.files[0];
+                 if (file) {
+                     const reader = new FileReader();
+                     reader.onload = (event) => {
+                         this.initCropper(event.target.result);
+                     };
+                     reader.readAsDataURL(file);
+                 }
+             },
+             
+             saveCrop() {
+                 this.cropper.getCroppedCanvas().toBlob((blob) => {
+                     const formData = new FormData();
+                     formData.append('file', blob, 'avatar.png');
+                     fetch('/api/user/upload_avatar', { method: 'POST', body: formData })
+                     .then(r => r.json())
+                     .then(d => { 
+                         if(d.success) window.location.reload(); 
+                         else alert(d.msg); 
+                     });
+                 });
+             },
+             
+             updateProfile() {
+                 fetch('/api/user/update_profile', { 
+                     method: 'POST', 
+                     headers: {'Content-Type': 'application/json'}, 
+                     body: JSON.stringify({ nickname: this.nickname }) 
+                 }).then(r => r.json()).then(d => { if(d.success) alert('Profile updated'); });
+             }
+         }" 
+         class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md" 
+         x-transition:enter="transition ease-spring duration-500" x-transition:enter-start="opacity-0 scale-90" x-transition:enter-end="opacity-100 scale-100"
+         x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-90"
+         @click.self="if(!showCropperModal) showSettings = false"
          style="display: none;">
-        <div @click.away="showSettings = false" class="glass-panel w-full max-w-md p-8 shadow-2xl bg-white dark:bg-slate-800">
-            <div class="flex justify-between items-center mb-8 border-b border-gray-200 dark:border-gray-700 pb-4">
+        
+        <div class="glass-panel w-full max-w-md p-8 shadow-2xl bg-white dark:bg-slate-800 overflow-y-auto max-h-[90vh]">
+            
+            <div class="flex justify-between items-center mb-6">
                 <h2 class="text-2xl font-bold" x-text="t('settings')">Settings</h2>
                 <button @click="showSettings = false" class="opacity-50 hover:opacity-100"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
             </div>
 
-            <div class="mb-8">
-                <label class="block text-xs font-bold opacity-50 uppercase mb-4" x-text="t('appearance')">Appearance</label>
-                <div class="grid grid-cols-2 gap-4 mb-6">
-                    <button @click="setMode('light')" class="p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-all duration-300 hover:scale-[1.02]"
-                            :class="settings.mode === 'light' ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-600' : 'border-transparent bg-gray-100 dark:bg-white/5'">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-                        <span class="text-sm font-bold">Light</span>
-                    </button>
-                    <button @click="setMode('dark')" class="p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-all duration-300 hover:scale-[1.02]"
-                            :class="settings.mode === 'dark' ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-600' : 'border-transparent bg-gray-100 dark:bg-white/5'">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
-                        <span class="text-sm font-bold">Dark</span>
-                    </button>
+            <div class="flex border-b border-gray-200 dark:border-white/10 mb-6">
+                <button @click="activeTab = 'account'" class="pb-2 px-4 text-sm font-bold transition-colors border-b-2" :class="activeTab === 'account' ? 'border-blue-500 text-blue-500' : 'border-transparent opacity-50'">Account</button>
+                <button @click="activeTab = 'appearance'" class="pb-2 px-4 text-sm font-bold transition-colors border-b-2" :class="activeTab === 'appearance' ? 'border-blue-500 text-blue-500' : 'border-transparent opacity-50'" x-text="t('appearance')">Appearance</button>
+            </div>
+
+            <div x-show="activeTab === 'account'" class="animate-fade-in">
+                <div class="mb-6 p-6 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border border-blue-100 dark:border-blue-500/20 flex flex-col items-center text-center relative group">
+                    
+                    <div class="w-24 h-24 rounded-full bg-white dark:bg-white/10 shadow-lg flex items-center justify-center mb-4 relative overflow-hidden cursor-pointer ring-4 ring-white dark:ring-white/10"
+                         onclick="document.getElementById('avatar-upload').click()">
+                        
+                        {% if current_user.is_authenticated %}
+                            {% if current_user.avatar and current_user.avatar != 'default.png' %}
+                                <img src="{{ url_for('static', filename='avatars/' + current_user.avatar) }}?t={{ range(1, 10000) | random }}" class="w-full h-full object-cover">
+                            {% else %}
+                                <div class="text-3xl font-black text-blue-500">{{ current_user.username[0] | upper }}</div>
+                            {% endif %}
+                        {% else %}
+                            <div class="text-3xl font-black text-gray-400">?</div>
+                        {% endif %}
+
+                        <div class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        </div>
+                    </div>
+                    <input type="file" id="avatar-upload" class="hidden" accept="image/*" @change="onFileChange">
+
+                    <div class="w-full mb-2">
+                        <label class="text-[10px] uppercase font-bold opacity-50 tracking-widest">Display Name</label>
+                        <div class="flex items-center justify-center gap-2 mt-1">
+                            <input type="text" x-model="nickname" class="bg-transparent text-center font-bold text-xl outline-none border-b border-transparent hover:border-gray-300 focus:border-blue-500 transition-colors w-full max-w-[200px]" @blur="updateProfile" @keydown.enter="updateProfile">
+                            <svg class="w-4 h-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                        </div>
+                    </div>
+                    
+                    <div class="text-xs opacity-50 font-mono mb-4">@{{ current_user.username }}</div>
+                    
+                    <div class="flex gap-2 w-full justify-center">
+                        {% if current_user.is_admin %}
+                        <a href="/admin" class="px-4 py-2 bg-purple-500 text-white rounded-xl font-bold text-xs hover:bg-purple-600 shadow-lg shadow-purple-500/30 transition-transform hover:scale-105">Admin Panel</a>
+                        {% endif %}
+                        <a href="/logout" class="px-4 py-2 bg-white dark:bg-white/10 border border-gray-200 dark:border-white/10 rounded-xl font-bold text-xs hover:text-red-500 hover:border-red-200 transition-colors">Sign Out</a>
+                    </div>
                 </div>
 
-                <div class="grid grid-cols-3 gap-3">
-                    <div @click="setBg('')" class="h-16 rounded-lg border-2 cursor-pointer bg-gray-200 dark:bg-slate-700 flex items-center justify-center hover:scale-105 transition-transform duration-300" :class="settings.bgImage===''?'border-blue-500':'border-transparent'">
-                        <span class="text-xs font-bold opacity-50">Default</span>
+                <div class="border-t border-gray-100 dark:border-white/5 pt-4">
+                    <button @click="changePassMode = !changePassMode" class="flex justify-between items-center w-full py-2 font-bold text-sm opacity-70 hover:opacity-100">
+                        <span>Change Password</span>
+                        <svg class="w-4 h-4 transition-transform" :class="changePassMode ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    
+                    <div x-show="changePassMode" x-transition class="mt-4 space-y-3">
+                        <input type="password" x-model="oldPass" placeholder="Current Password" class="w-full p-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="password" x-model="newPass" placeholder="New Password (min 6 chars)" class="w-full p-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                        <button @click="
+                            if(newPass.length < 6) { alert('Password too short'); return; }
+                            fetch('/api/user/change_password', { 
+                                method: 'POST', 
+                                headers: {'Content-Type': 'application/json'}, 
+                                body: JSON.stringify({old_password: oldPass, new_password: newPass}) 
+                            }).then(r => r.json()).then(d => { 
+                                if(d.success) { alert('Password changed!'); changePassMode = false; oldPass=''; newPass=''; } 
+                                else alert(d.msg); 
+                            })
+                        " class="w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold text-xs shadow-lg">Update Password</button>
                     </div>
+                </div>
+            </div>
+
+            <div x-show="activeTab === 'appearance'" class="animate-fade-in">
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <button @click="setMode('light')" class="p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-all duration-300 hover:scale-[1.02]" :class="settings.mode === 'light' ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-600' : 'border-transparent bg-gray-100 dark:bg-white/5'"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg><span class="text-sm font-bold">Light</span></button>
+                    <button @click="setMode('dark')" class="p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-all duration-300 hover:scale-[1.02]" :class="settings.mode === 'dark' ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-600' : 'border-transparent bg-gray-100 dark:bg-white/5'"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg><span class="text-sm font-bold">Dark</span></button>
+                </div>
+                <div class="grid grid-cols-3 gap-3 mb-6">
+                    <div @click="setBg('')" class="h-16 rounded-lg border-2 cursor-pointer bg-gray-200 dark:bg-slate-700 flex items-center justify-center hover:scale-105 transition-transform duration-300" :class="settings.bgImage===''?'border-blue-500':'border-transparent'"><span class="text-xs font-bold opacity-50">Default</span></div>
                     <div @click="setBg('https://images.unsplash.com/photo-1477346611705-65d1883cee1e?auto=format&fit=crop&q=80')" class="h-16 rounded-lg border-2 cursor-pointer bg-cover hover:scale-105 transition-transform duration-300" :class="settings.bgImage.includes('14773')?'border-blue-500':'border-transparent'" style="background-image: url('https://images.unsplash.com/photo-1477346611705-65d1883cee1e?auto=format&fit=crop&q=80&w=200')"></div>
                     <div @click="setBg('https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?auto=format&fit=crop&q=80')" class="h-16 rounded-lg border-2 cursor-pointer bg-cover hover:scale-105 transition-transform duration-300" :class="settings.bgImage.includes('15347')?'border-blue-500':'border-transparent'" style="background-image: url('https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?auto=format&fit=crop&q=80&w=200')"></div>
                 </div>
+                <div>
+                    <label class="block text-xs font-bold opacity-50 uppercase mb-4" x-text="t('language')">Language</label>
+                    <div class="flex gap-3">
+                        <button @click="setLang('en'); window.location.reload()" class="flex-1 py-2 rounded-lg border font-bold transition-all hover:scale-[1.02]" :class="lang === 'en' ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-200 dark:border-gray-700'">English</button>
+                        <button @click="setLang('zh'); window.location.reload()" class="flex-1 py-2 rounded-lg border font-bold transition-all hover:scale-[1.02]" :class="lang === 'zh' ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-200 dark:border-gray-700'">中文</button>
+                    </div>
+                </div>
             </div>
 
-            <div>
-                <label class="block text-xs font-bold opacity-50 uppercase mb-4" x-text="t('language')">Language</label>
-                <div class="flex gap-3">
-                    <button @click="setLang('en'); window.location.reload()" class="flex-1 py-2 rounded-lg border font-bold transition-all hover:scale-[1.02]" :class="lang === 'en' ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-200 dark:border-gray-700'">English</button>
-                    <button @click="setLang('zh'); window.location.reload()" class="flex-1 py-2 rounded-lg border font-bold transition-all hover:scale-[1.02]" :class="lang === 'zh' ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-200 dark:border-gray-700'">中文</button>
+        </div>
+
+        <div x-show="showCropperModal" 
+             @click.stop
+             class="absolute inset-0 z-[200] bg-black flex flex-col items-center justify-center p-4">
+            <div class="w-full max-w-lg bg-white dark:bg-slate-800 rounded-xl overflow-hidden shadow-2xl">
+                <div class="h-[400px] bg-black/90 w-full">
+                    <img id="image-to-crop" class="max-h-full max-w-full block mx-auto">
+                </div>
+                <div class="p-4 flex justify-between bg-white dark:bg-slate-800">
+                    <button @click="showCropperModal = false" class="px-4 py-2 font-bold text-sm text-gray-500 hover:text-gray-800 dark:hover:text-white">Cancel</button>
+                    <button @click="saveCrop()" class="px-6 py-2 bg-blue-500 text-white rounded-lg font-bold shadow-lg hover:bg-blue-600">Save Avatar</button>
                 </div>
             </div>
         </div>
+
     </div>
 
     <audio x-ref="audioPlayer" :src="music.list[music.currentIdx].url" @ended="handleTrackEnd()" class="hidden"></audio>

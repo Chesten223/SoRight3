@@ -6,7 +6,7 @@
         
         <div class="glass-panel col-span-1 md:col-span-3 lg:col-span-2 p-8 flex flex-col justify-between transform transition-transform duration-500 ease-spring hover:scale-[1.02] hover:shadow-2xl">
             <div>
-                <h1 class="text-4xl font-black mb-2 tracking-tight" x-text="t('welcome')">Welcome Back.</h1>
+                <h1 class="text-4xl font-black mb-2 tracking-tight">Welcome Back, <span class="text-blue-600 dark:text-blue-400">{{ user.display_name }}</span>.</h1>
                 <p class="text-lg opacity-60 font-medium" x-text="t('subtitle')">Ready to learn?</p>
             </div>
             <div class="mt-8 flex gap-8">

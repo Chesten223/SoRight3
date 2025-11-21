@@ -1,0 +1,16 @@
+services:
+  web:
+    build: .
+    container_name: physics_pro
+    restart: always
+    ports:
+      - "5000:5000"
+    volumes:
+      # [关键] 把宿主机的数据库挂载进去，防止重启容器丢失数据
+      - ./physics.db:/app/physics.db
+      # 把宿主机的日志挂载进去，方便查看
+      - ./logs:/app/logs
+    environment:
+      - FLASK_APP=app.py
+      - SECRET_KEY=prod-secret-key-change-me-123
+      - DATABASE_URL=sqlite:///physics.db

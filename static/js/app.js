@@ -629,13 +629,44 @@ document.addEventListener('alpine:init', () => {
             this.moveModal.currentPath = data.breadcrumbs || [];
             this.moveModal.targetId = folderId;
         },
-        async confirmMove() {
-            if (this.moveModal.targetId === this.ctxMenu.item.id) return;
-            const res = await fetch('/api/notebooks/move', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id: this.ctxMenu.item.id, parent: this.moveModal.targetId }) });
-            if ((await res.json()).success) {
-                this.showToast("toast_success", "Moved");
-                this.moveModal.show = false;
-                this.loadBook(this.bookId);
+        async confirmMove() { 
+            // 1. 校验参数
+            if (!this.ctxMenu.item) {
+                alert("No item selected");
+                return;
+            }
+            // 目标文件夹 ID
+            const targetId = this.moveModal.targetId;
+            // 当前项目 ID
+            const itemId = this.ctxMenu.item.id;
+
+            if (targetId === itemId) return; // 不能移给自己
+            
+            // 2. 发送请求
+            const res = await fetch('/api/notes/move', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ 
+                    id: itemId, 
+                    parent: targetId 
+                }) 
+            }); 
+            
+            const d = await res.json();
+            
+            // 3. 处理结果
+            if(d.success) { 
+                this.showToast("Success", "Item moved"); 
+                
+                // 关闭所有相关弹窗
+                this.moveModal.show = false; 
+                this.ctxMenu.show = false;
+                
+                // 4. 关键：刷新视图
+                // 重新加载当前正在浏览的页面，以移除已移走的项目
+                await this.loadNote(this.noteId); 
+            } else {
+                alert(d.msg || "Move failed");
             }
         },
 
@@ -689,6 +720,15 @@ document.addEventListener('alpine:init', () => {
             if (!this.feedback.is_correct) setTimeout(() => { this.showExplanation = true; }, 800);
         },
         
+        async fetchRelatedNotes() {
+            this.relatedNotes = [];
+            if (!this.question.id) return;
+            try {
+                const res = await fetch(`/api/get_related_notes?q_id=${this.question.id}`);
+                this.relatedNotes = await res.json();
+            } catch(e) { console.error(e); }
+        },
+
         // ... (Helpers: getOptionClass, toggleAI, etc. keep unchanged) ...
         getOptionClass(id) { let base = 'backdrop-blur-md shadow-sm transition-all duration-200 cursor-pointer overflow-hidden border border-transparent hover:scale-[1.01] active:scale-[0.99] '; let theme = 'bg-white/70 hover:bg-white/90 dark:bg-black/20 dark:hover:bg-white/5 dark:border-gray-700 '; if (this.selectedOption === id && !this.submitted) return 'bg-blue-500/10 border-blue-500 text-blue-700 dark:text-blue-400 ring-1 ring-blue-500 shadow-md ' + base; if (this.submitted) { if (id === this.feedback.correct_id) return 'bg-green-500/20 border-green-500 text-green-800 dark:text-green-400 ' + base; if (id === this.selectedOption) return 'bg-red-500/20 border-red-500 text-red-800 dark:text-red-400 ' + base; return theme + 'opacity-40 grayscale ' + base; } return theme + base; },
         getOptionCircleClass(id) { if (this.selectedOption === id && !this.submitted) return 'border-blue-500 text-blue-500 bg-transparent'; if (this.submitted && id === this.feedback.correct_id) return 'border-green-500 bg-green-500 text-white'; if (this.submitted && id === this.selectedOption) return 'border-red-500 bg-red-500 text-white'; return 'border-gray-300 dark:border-gray-600 text-gray-400'; },
@@ -911,18 +951,21 @@ document.addEventListener('alpine:init', () => {
         async handleDrop(e, targetIndex) {
             e.preventDefault();
             this.handleDragEnd(e);
+            
             if (this.dragSourceIndex === null || this.dragSourceIndex === targetIndex) return;
 
-            // 1. Optimistic UI update
+            // 1. 前端立即重排
             const items = this.viewData.items;
             const [movedItem] = items.splice(this.dragSourceIndex, 1);
             items.splice(targetIndex, 0, movedItem);
             this.viewData.items = items;
 
-            // 2. Backend Sync
-            const parentId = this.viewData.breadcrumbs.length > 1 
-                ? this.viewData.breadcrumbs[this.viewData.breadcrumbs.length - 2].id 
-                : 'root';
+            // 2. [关键修复] 计算正确的父ID：应该是当前视图的面包屑的最后一个
+            let parentId = 'root';
+            if (this.viewData.breadcrumbs.length > 0) {
+                parentId = this.viewData.breadcrumbs[this.viewData.breadcrumbs.length - 1].id;
+            }
+
             const newOrder = items.map(i => i.id);
             
             await fetch('/api/notes/reorder', {
@@ -1049,6 +1092,7 @@ document.addEventListener('alpine:init', () => {
             if((await res.json()).success) { 
                 this.showToast("Moved", "Success"); 
                 this.moveModal.show = false; 
+                // 强制刷新
                 this.loadNote(this.noteId); 
             } 
         },
