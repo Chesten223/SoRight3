@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - Physics Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="h-screen w-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white overflow-hidden relative">
+    <div class="absolute top-0 left-0 w-full h-full z-0 overflow-hidden">
+        <div class="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-500/20 rounded-full blur-3xl animate-pulse"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-500/20 rounded-full blur-3xl animate-pulse" style="animation-delay: 1s;"></div>
+    </div>
+
+    <div class="glass-panel w-full max-w-md p-10 z-10 relative flex flex-col items-center shadow-2xl border border-white/20">
+        <div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-black text-3xl mb-6 shadow-lg shadow-blue-500/30">P</div>
+        <h1 class="text-3xl font-black mb-2 tracking-tight">Welcome Back</h1>
+        <p class="opacity-60 mb-8 text-sm">Sign in to access your knowledge base.</p>
+
+        <form action="/login" method="POST" class="w-full space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div>
+                <input type="text" name="username" placeholder="Username" required 
+                       class="w-full p-4 rounded-xl bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-white/10 focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium">
+            </div>
+            <div>
+                <input type="password" name="password" placeholder="Password" required 
+                       class="w-full p-4 rounded-xl bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-white/10 focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium">
+            </div>
+            
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    <div class="p-3 rounded-xl bg-red-500/10 text-red-500 text-xs font-bold text-center border border-red-500/20">
+                        {{ messages[0] }}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <button type="submit" class="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold shadow-lg hover:scale-[1.02] transition-transform">
+                Sign In
+            </button>
+        </form>
+
+        <div class="mt-8 text-xs opacity-50">
+            Don't have an account? <a href="/register" class="font-bold hover:underline">Register here</a>
+        </div>
+    </div>
+</body>
+</html>

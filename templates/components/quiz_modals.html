@@ -1,24 +1,196 @@
 <div x-show="showExplanation" class="absolute bottom-0 left-0 w-full flex justify-center z-50 pointer-events-none"
-     x-transition:enter="transition ease-out duration-500" x-transition:enter-start="translate-y-full opacity-0" x-transition:enter-end="translate-y-0 opacity-100"
-     x-transition:leave="transition ease-in duration-300" x-transition:leave-start="translate-y-0 opacity-100" x-transition:leave-end="translate-y-full opacity-0">
-    <div class="pointer-events-auto w-full max-w-3xl bg-white/95 dark:bg-slate-800/95 backdrop-blur-3xl border border-white/20 shadow-2xl rounded-t-[3rem] p-10 pb-16 relative">
+     x-transition:enter="transition ease-spring duration-500" x-transition:enter-start="translate-y-full opacity-0" x-transition:enter-end="translate-y-0 opacity-100"
+     x-transition:leave="transition ease-in duration-300" x-transition:leave-start="translate-y-0 opacity-100" x-transition:leave-end="translate-y-full opacity-0"
+     style="display: none;">
+    
+    <div class="pointer-events-auto w-full max-w-3xl bg-white/95 dark:bg-slate-800/95 backdrop-blur-3xl border border-white/20 shadow-2xl rounded-t-[3rem] p-10 pb-16 relative max-h-[85vh] flex flex-col">
         <button @click="showExplanation = false" class="absolute top-6 right-6 p-3 bg-gray-100 dark:bg-white/10 rounded-full"><svg class="w-5 h-5 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
-        <div class="flex items-center gap-4 mb-6">
+        
+        <div class="flex items-center gap-4 mb-6 shrink-0">
             <div class="w-12 h-12 bg-red-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-red-500/30"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
             <h3 class="text-2xl font-black" x-text="t('diagnosis')">Diagnosis</h3>
         </div>
-        <div class="prose prose-lg max-w-none text-gray-600 dark:text-gray-300 math-content bg-red-50 dark:bg-red-900/20 p-6 rounded-2xl border border-red-100 dark:border-red-500/20">
-            <p class="font-bold mb-2"><span x-text="t('correct_label')">Correct:</span> <span class="text-green-600 text-xl" x-text="feedback.correct_id"></span></p>
-            <div x-html="feedback.explanation"></div>
+        
+        <div class="flex-1 overflow-y-auto custom-scrollbar pr-2">
+            <div class="prose prose-lg max-w-none text-gray-600 dark:text-gray-300 math-content bg-red-50 dark:bg-red-900/20 p-6 rounded-2xl border border-red-100 dark:border-red-500/20 mb-6">
+                <p class="font-bold mb-2"><span x-text="t('correct_label')">Correct:</span> <span class="text-green-600 text-xl" x-text="feedback.correct_id"></span></p>
+                <div x-html="feedback.explanation"></div>
+            </div>
+
+            <div x-show="relatedNotes && relatedNotes.length > 0" class="animate-fade-in">
+                <h4 class="text-sm font-bold uppercase opacity-50 tracking-widest mb-3 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                    Related Notes
+                </h4>
+                <div class="grid gap-3">
+                    <template x-for="note in relatedNotes" :key="note.id">
+                        <a :href="`/notes?id=${note.id}`" target="_blank" class="block p-4 rounded-xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-500/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors cursor-pointer group">
+                            <div class="flex justify-between items-center">
+                                <div class="font-bold text-blue-700 dark:text-blue-300" x-text="note.name"></div>
+                                <svg class="w-4 h-4 opacity-50 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                            </div>
+                            <div class="text-xs opacity-60 mt-1 truncate font-mono" x-text="note.preview"></div>
+                        </a>
+                    </template>
+                </div>
+            </div>
         </div>
-        <div class="mt-8 flex gap-4">
+
+        <div class="mt-8 flex gap-4 shrink-0 pt-4 border-t border-gray-100 dark:border-white/5">
             <button @click="showExplanation = false; toggleAI()" class="flex-1 py-4 bg-blue-500/10 text-blue-500 rounded-2xl font-bold hover:bg-blue-500/20 transition-colors text-lg" x-text="t('ask_ai')">Ask AI</button>
             <button @click="showExplanation = false; loadNext()" class="flex-1 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-bold transition-colors text-lg shadow-lg" x-text="t('next')">Next</button>
         </div>
     </div>
 </div>
 
-<div x-show="showAddToBookModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm" x-transition.opacity style="display: none;">
+<div x-show="showRefModal" 
+     @click="showRefModal = false"
+     x-transition:enter="transition ease-spring duration-500" x-transition:enter-start="opacity-0 translate-y-8" x-transition:enter-end="opacity-100 translate-y-0"
+     x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-8"
+     class="fixed inset-0 z-[130] flex items-center justify-center bg-gray-500/5 dark:bg-black/40 backdrop-blur-[2px]" 
+     style="display: none;">
+    
+    <div @click.stop 
+         class="glass-panel w-full max-w-3xl h-[80vh] flex flex-col shadow-2xl bg-white/95 dark:bg-[#151515]/95 relative border border-white/20 rounded-3xl overflow-hidden ring-1 ring-black/5">
+        
+        <div class="px-8 py-6 flex justify-between items-center shrink-0 z-10">
+            <div class="flex items-center gap-3">
+                <div class="px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-black uppercase tracking-wider" x-text="refQuestion.id"></div>
+                <div class="h-4 w-px bg-gray-200 dark:bg-white/10"></div>
+                <span x-show="!refSubmitted" class="text-sm font-bold opacity-50">Practice</span>
+                <span x-show="refSubmitted" class="text-sm font-bold animate-fade-in" :class="refFeedback.is_correct ? 'text-green-500' : 'text-red-500'" x-text="refFeedback.is_correct ? 'Correct' : 'Wrong'"></span>
+            </div>
+            <button @click="showRefModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto px-8 pb-8 md:px-12 md:pb-12 custom-scrollbar">
+            <div class="prose prose-lg dark:prose-invert max-w-none math-content mb-10 leading-relaxed" x-html="refQuestion.content"></div>
+            <div class="grid gap-4">
+                <template x-for="opt in refQuestion.options" :key="opt.id">
+                    <div @click.stop="selectRefOption(opt.id)" class="group relative p-5 pl-16 rounded-2xl transition-all duration-300 cursor-pointer border" :class="getRefOptionClass(opt.id)">
+                        <div class="absolute left-5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm font-bold transition-all" :class="refSelected === opt.id ? 'border-blue-500 text-blue-500 scale-110' : 'border-gray-300 dark:border-gray-600 text-gray-400 group-hover:border-gray-400'"><span x-text="opt.id"></span></div>
+                        <div class="math-content font-medium text-lg" x-html="opt.text"></div>
+                    </div>
+                </template>
+            </div>
+            <div x-show="refShowExplanation" x-transition:enter="transition ease-out duration-500" x-transition:enter-start="opacity-0 translate-y-8" x-transition:enter-end="opacity-100 translate-y-0" class="mt-10 p-8 bg-blue-50/50 dark:bg-blue-900/10 rounded-3xl border border-blue-100 dark:border-blue-500/20">
+                 <div class="flex items-center gap-2 mb-4 text-blue-600 dark:text-blue-400"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg><span class="font-bold uppercase tracking-widest text-xs">Insight</span></div>
+                 <div class="prose prose-sm dark:prose-invert max-w-none math-content" x-html="refFeedback.explanation || refQuestion.ai_context?.explanation || 'Explanation hidden.'"></div>
+            </div>
+        </div>
+
+        <div class="p-6 flex justify-between items-center bg-white/80 dark:bg-[#151515]/80 backdrop-blur-xl border-t border-gray-100 dark:border-white/5 z-20">
+            <button @click="refShowExplanation = !refShowExplanation" class="flex items-center gap-2 px-4 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-sm font-bold opacity-60 hover:opacity-100 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg><span x-text="refShowExplanation ? 'Hide' : 'Analyze'"></span>
+            </button>
+            <div class="flex gap-3">
+                <button x-show="!refSubmitted" @click="submitRef()" :disabled="!refSelected" class="px-10 py-3 bg-slate-900 dark:bg-white dark:text-black text-white rounded-2xl font-bold shadow-xl shadow-black/10 hover:scale-[1.02] transition-transform text-sm disabled:opacity-50 disabled:scale-100">Check Answer</button>
+                <button x-show="refSubmitted" @click="showRefModal = false" class="px-8 py-3 bg-gray-100 dark:bg-white/10 rounded-2xl font-bold hover:bg-gray-200 dark:hover:bg-white/20 transition-colors text-sm">Done</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div x-show="ctxMenu.show" 
+     @click.stop
+     x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+     class="fixed z-[999] min-w-[180px] glass-panel shadow-2xl border border-white/20 overflow-hidden flex flex-col py-1"
+     :style="`top: ${ctxMenu.y}px; left: ${ctxMenu.x}px`"
+     style="display: none;">
+     
+     <div class="px-4 py-2 text-[10px] font-bold uppercase opacity-50 tracking-wider border-b border-white/10 mb-1" x-text="ctxMenu.type === 'folder' ? 'Folder Action' : (ctxMenu.type === 'question' ? 'Question Action' : 'Options')"></div>
+     
+     <template x-if="ctxMenu.type === 'folder' || ctxMenu.type === 'question'">
+         <div>
+             <button @click="openRenameModal()" x-show="ctxMenu.type === 'folder'" class="w-full px-4 py-2 text-sm font-bold text-left hover:bg-blue-500 hover:text-white transition-colors flex items-center gap-3">
+                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg> Rename
+             </button>
+
+             <button @click="openMoveModal('move')" class="w-full px-4 py-2 text-sm font-bold text-left hover:bg-blue-500 hover:text-white transition-colors flex items-center gap-3">
+                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg> Move to...
+             </button>
+
+             <button @click="openMoveModal('copy')" x-show="ctxMenu.type === 'question'" class="w-full px-4 py-2 text-sm font-bold text-left hover:bg-green-500 hover:text-white transition-colors flex items-center gap-3">
+                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg> Copy to...
+             </button>
+
+             <button @click="openTagsModal()" x-show="ctxMenu.type === 'question'" class="w-full px-4 py-2 text-sm font-bold text-left hover:bg-purple-500 hover:text-white transition-colors flex items-center gap-3">
+                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg> Edit Tags
+             </button>
+
+             <div class="h-px bg-white/10 my-1"></div>
+             
+             <button @click="deleteItem()" class="w-full px-4 py-2 text-sm font-bold text-left hover:bg-red-500 hover:text-white text-red-500 transition-colors flex items-center gap-3">
+                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg> Delete
+             </button>
+         </div>
+     </template>
+
+     <template x-if="ctxMenu.type === 'blank'">
+         <div>
+             <button @click="createSubBook(); ctxMenu.show = false" class="w-full px-4 py-2 text-sm font-bold text-left hover:bg-blue-500 hover:text-white transition-colors flex items-center gap-3">
+                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg> New Folder
+             </button>
+         </div>
+     </template>
+</div>
+
+<div x-show="renameModal.show" class="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 backdrop-blur-sm" style="display: none;">
+    <div @click.away="renameModal.show = false" class="glass-panel p-6 w-full max-w-sm shadow-2xl bg-white dark:bg-slate-800 transform transition-all scale-100">
+        <h3 class="font-bold text-lg mb-4">Rename</h3>
+        <input type="text" x-model="renameModal.name" @keydown.enter="confirmRename()" class="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent mb-4 focus:ring-2 focus:ring-blue-500 outline-none font-bold" autofocus>
+        <div class="flex gap-2">
+            <button @click="renameModal.show = false" class="flex-1 py-2 bg-gray-100 dark:bg-white/10 rounded-lg font-bold opacity-70 hover:opacity-100">Cancel</button>
+            <button @click="confirmRename()" class="flex-1 py-2 bg-blue-500 text-white rounded-lg font-bold hover:bg-blue-600">Save</button>
+        </div>
+    </div>
+</div>
+
+<div x-show="moveModal.show" class="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 backdrop-blur-sm" style="display: none;">
+    <div @click.away="moveModal.show = false" class="glass-panel w-full max-w-md h-[500px] flex flex-col shadow-2xl bg-white dark:bg-slate-800 transform transition-all scale-100">
+        <div class="p-4 border-b border-white/10 flex justify-between items-center">
+            <h3 class="font-bold text-lg" x-text="moveAction === 'copy' ? 'Copy to...' : 'Move to...'">Move to...</h3>
+            <button @click="moveModal.show = false" class="p-1 hover:bg-white/10 rounded-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        </div>
+        <div class="px-4 py-2 flex gap-1 text-xs opacity-60 border-b border-white/5 overflow-x-auto no-scrollbar">
+            <template x-for="(crumb, i) in moveModal.currentPath" :key="crumb.id">
+                <div class="flex gap-1 shrink-0"><span @click="loadMovePicker(crumb.id)" class="hover:underline cursor-pointer hover:text-blue-500" x-text="crumb.name"></span><span x-show="i < moveModal.currentPath.length - 1">/</span></div>
+            </template>
+        </div>
+        <div class="flex-1 overflow-y-auto p-4 space-y-2">
+            <div x-show="moveModal.currentPath.length > 1" @click="loadMovePicker(moveModal.currentPath[moveModal.currentPath.length - 2].id)" class="p-2 px-4 rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-white/5 flex items-center gap-2 opacity-60 hover:opacity-100 text-xs font-bold mb-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg> Back
+            </div>
+            <template x-for="item in moveModal.items" :key="item.id">
+                <div @click="loadMovePicker(item.id)" class="p-3 rounded-xl cursor-pointer bg-gray-50 dark:bg-white/5 hover:bg-blue-500 hover:text-white transition-colors flex items-center gap-3 group">
+                    <svg class="w-5 h-5 text-blue-500 group-hover:text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"></path></svg>
+                    <span class="font-bold text-sm flex-1" x-text="item.name"></span>
+                </div>
+            </template>
+            <div x-show="moveModal.items.length === 0" class="text-center opacity-30 py-10 text-xs font-bold uppercase">No subfolders</div>
+        </div>
+        <div class="p-4 border-t border-white/10 bg-gray-50 dark:bg-black/20 flex justify-between items-center">
+            <div class="text-xs opacity-50">Current: <span x-text="moveModal.currentPath[moveModal.currentPath.length-1]?.name"></span></div>
+            <button @click="confirmMove()" class="px-6 py-2 bg-blue-500 text-white rounded-lg font-bold hover:bg-blue-600 transition-colors shadow-lg" x-text="moveAction === 'copy' ? 'Copy Here' : 'Move Here'">Move Here</button>
+        </div>
+    </div>
+</div>
+
+<div x-show="showCreateModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm" style="display: none;">
+    <div @click.away="showCreateModal = false" class="glass-panel p-6 w-full max-w-sm shadow-2xl bg-white dark:bg-slate-800 transform transition-all scale-100">
+        <h3 class="font-bold text-lg mb-4"><span x-text="t('new_folder_title')">New Folder</span></h3>
+        <label class="text-xs font-bold opacity-50 uppercase mb-1 block" x-text="t('name_label')">Name</label>
+        <input type="text" x-model="subBookName" class="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent mb-4 focus:ring-2 focus:ring-blue-500 outline-none">
+        <label class="text-xs font-bold opacity-50 uppercase mb-1 block" x-text="t('tags_label')">Tags</label>
+        <input type="text" x-model="subBookTags" class="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent mb-4 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+        <div class="flex gap-2">
+            <button @click="showCreateModal = false" class="flex-1 py-2 bg-gray-100 dark:bg-white/10 rounded-lg font-bold opacity-70 hover:opacity-100" x-text="t('cancel')">Cancel</button>
+            <button @click="confirmCreateSubBook()" class="flex-1 py-2 bg-blue-500 text-white rounded-lg font-bold hover:bg-blue-600" x-text="t('create')">Create</button>
+        </div>
+    </div>
+</div>
+
+<div x-show="showAddToBookModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm" style="display: none;">
     <div @click.away="showAddToBookModal = false" class="glass-panel p-6 w-full max-w-sm shadow-2xl bg-white dark:bg-slate-800 transform transition-all scale-100">
         <h3 class="font-bold text-lg mb-4" x-text="t('add_to_notebook')">Add to Notebook</h3>
         <div class="max-h-60 overflow-y-auto space-y-2 mb-4 pr-2">
@@ -30,35 +202,59 @@
     </div>
 </div>
 
-<div x-show="showCreateModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm" x-transition.opacity style="display: none;">
-    <div @click.away="showCreateModal = false" class="glass-panel p-6 w-full max-w-sm shadow-2xl bg-white dark:bg-slate-800 transform transition-all scale-100">
-        <h3 class="font-bold text-lg mb-4"><span x-text="t('new_folder_title')">New Folder</span> <span class="opacity-60" x-text="'in ' + bookData.info?.name"></span></h3>
-        
-        <label class="text-xs font-bold opacity-50 uppercase mb-1 block" x-text="t('name_label')">Name</label>
-        <input type="text" x-model="subBookName" class="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent mb-4 focus:ring-2 focus:ring-blue-500 outline-none">
-        
-        <label class="text-xs font-bold opacity-50 uppercase mb-1 block" x-text="t('tags_label')">Custom Tags</label>
-        <input type="text" x-model="subBookTags" class="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent mb-4 focus:ring-2 focus:ring-blue-500 outline-none text-sm" :placeholder="t('tags_placeholder')">
-        
+<div x-show="showQuestionPicker" class="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm" 
+     x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+     style="display: none;">
+    <div @click.away="showQuestionPicker = false" class="glass-panel w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl bg-white dark:bg-slate-800 border border-white/10">
+        <div class="p-6 border-b border-gray-200 dark:border-white/10 flex justify-between items-center">
+            <div>
+                <h3 class="font-bold text-lg">Import Question</h3>
+                <div class="flex gap-1 text-xs mt-1 opacity-50">
+                    <template x-for="(crumb, i) in pickerData.breadcrumbs" :key="crumb.id">
+                        <div class="flex gap-1"><span @click="loadPickerData(crumb.id)" class="hover:underline cursor-pointer hover:text-blue-500" x-text="crumb.name"></span><span x-show="i < pickerData.breadcrumbs.length - 1">/</span></div>
+                    </template>
+                </div>
+            </div>
+            <button @click="showQuestionPicker = false" class="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+            <div x-show="pickerData.breadcrumbs.length > 1" @click="loadPickerData(pickerData.breadcrumbs[pickerData.breadcrumbs.length - 2].id)" class="p-2 px-4 rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-white/5 flex items-center gap-2 opacity-60 hover:opacity-100 text-xs font-bold mb-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg> Back
+            </div>
+            <template x-for="sub in pickerData.sub_notebooks" :key="sub.id">
+                 <div @click="loadPickerData(sub.id)" class="p-3 rounded-xl cursor-pointer flex items-center gap-3 hover:bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 border border-transparent hover:border-yellow-500/30">
+                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"></path></svg>
+                     <div class="flex-1 font-bold text-sm" x-text="sub.name"></div>
+                 </div>
+            </template>
+            <template x-for="q in pickerData.questions" :key="q.id">
+                <div @click="insertQuestionRef(q.id)" class="p-4 rounded-xl border border-gray-200 dark:border-white/10 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer transition-colors group">
+                    <div class="flex justify-between mb-1"><span class="text-xs font-bold opacity-50" x-text="q.id"></span><div class="flex gap-1"><template x-for="tag in q.tags"><span class="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-white/10 text-[10px]" x-text="tag"></span></template></div></div>
+                    <div class="text-sm font-medium truncate" x-text="q.summary"></div>
+                </div>
+            </template>
+            <div x-show="pickerData.sub_notebooks.length === 0 && pickerData.questions.length === 0" class="text-center p-8 opacity-50">Empty Folder</div>
+        </div>
+    </div>
+</div>
+
+<div x-show="tagsModal.show" class="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 backdrop-blur-sm" style="display: none;">
+    <div @click.away="tagsModal.show = false" class="glass-panel p-6 w-full max-w-sm shadow-2xl bg-white dark:bg-slate-800 transform transition-all scale-100">
+        <h3 class="font-bold text-lg mb-4">Edit Tags</h3>
+        <div class="text-xs opacity-50 mb-2">Separate with commas (e.g. Math, Hard)</div>
+        <input type="text" x-model="tagsModal.tags" @keydown.enter="confirmTags()" class="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent mb-4 focus:ring-2 focus:ring-blue-500 outline-none font-bold" autofocus>
         <div class="flex gap-2">
-            <button @click="showCreateModal = false" class="flex-1 py-2 bg-gray-100 dark:bg-white/10 rounded-lg font-bold opacity-70 hover:opacity-100 transition-opacity" x-text="t('cancel')">Cancel</button>
-            <button @click="confirmCreateSubBook()" class="flex-1 py-2 bg-blue-500 text-white rounded-lg font-bold hover:bg-blue-600 transition-colors" x-text="t('create')">Create</button>
+            <button @click="tagsModal.show = false" class="flex-1 py-2 bg-gray-100 dark:bg-white/10 rounded-lg font-bold opacity-70 hover:opacity-100">Cancel</button>
+            <button @click="confirmTags()" class="flex-1 py-2 bg-blue-500 text-white rounded-lg font-bold hover:bg-blue-600">Save</button>
         </div>
     </div>
 </div>
 
 <div x-show="notify.show" 
-     x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0"
-     x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-4"
-     class="fixed bottom-6 left-6 z-[110] glass-panel px-6 py-4 flex items-center gap-4 border-2 shadow-2xl min-w-[240px]"
-     :class="notify.show ? 'toast-border-anim' : 'border-transparent'"
-     style="display: none;">
-     
-    <div class="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-lg">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-    </div>
-    <div>
-        <div class="font-bold text-sm" x-text="notify.title">Notification</div>
-        <div class="text-xs opacity-60" x-text="notify.msg">Action completed</div>
-    </div>
+     x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-10" x-transition:enter-end="opacity-100 translate-y-0"
+     x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+     class="fixed bottom-8 left-1/2 -translate-x-1/2 z-[9999] px-6 py-3 bg-slate-900 text-white rounded-full shadow-2xl flex items-center gap-3 border border-white/10 toast-border-anim">
+    <div class="font-bold" x-text="notify.title"></div>
+    <div class="w-px h-4 bg-white/20"></div>
+    <div class="text-sm opacity-80" x-text="notify.msg"></div>
 </div>

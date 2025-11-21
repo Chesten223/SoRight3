@@ -1,52 +1,111 @@
 <template x-if="mode === 'mistake'">
-    <div class="w-72 h-full glass-panel ml-4 mb-4 flex flex-col overflow-hidden z-30 border-r border-white/10 relative animate-fade-in">
-        
-        <div class="p-5 border-b border-white/10 bg-white/5">
-            <h3 class="font-bold text-lg truncate" x-text="bookData.info?.name || t('loading')"></h3>
-            <div class="flex flex-wrap gap-1 mt-2">
-                <template x-for="tag in (bookData.info?.tags || [])">
-                    <span class="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-500 text-[10px] font-bold uppercase" x-text="tag"></span>
-                </template>
-            </div>
-        </div>
+    <div>
+        <div class="w-72 ml-4 shrink-0 hidden md:block"></div>
 
-        <div class="flex-1 overflow-y-auto p-3 space-y-2 no-scrollbar">
-            <div @click="currentQIndex = -1" 
-                 class="p-3 rounded-xl cursor-pointer transition-all flex items-center gap-3"
-                 :class="currentQIndex === -1 ? 'bg-blue-500 text-white shadow-lg' : 'hover:bg-white/10 dark:hover:bg-white/5'">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                <span class="text-sm font-bold" x-text="t('overview')">Overview</span>
-            </div>
+        <div class="fixed top-20 left-4 bottom-4 w-72 z-30 flex flex-col" style="transform: translate3d(0,0,0); -webkit-font-smoothing: antialiased;">
             
-            <div x-show="bookData.sub_notebooks && bookData.sub_notebooks.length > 0">
-                 <div class="text-[10px] font-bold uppercase opacity-40 px-3 mt-4 mb-2" x-text="t('folders')">Folders</div>
-                 <template x-for="sub in bookData.sub_notebooks" :key="sub.id">
-                     <div @click="loadBook(sub.id)" 
-                          class="p-3 rounded-xl cursor-pointer transition-all flex items-center gap-3 hover:bg-yellow-500/10 text-yellow-600 dark:text-yellow-500">
-                         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"></path></svg>
-                         <div class="flex-1 min-w-0">
-                             <div class="text-sm font-bold truncate" x-text="sub.name"></div>
-                             <div class="text-[10px] opacity-60" x-text="sub.count + t('items_suffix')"> items</div>
-                         </div>
-                     </div>
-                 </template>
-            </div>
-
-            <div class="h-px bg-white/10 my-2"></div>
-            
-            <div class="text-[10px] font-bold uppercase opacity-40 px-3 mb-2" x-text="t('questions_list')">Questions</div>
-
-            <template x-for="(item, idx) in bookData.questions" :key="item.id">
-                <div @click="jumpToQuestion(idx)" 
-                     class="p-3 rounded-xl cursor-pointer transition-all group border border-transparent hover:border-white/10"
-                     :class="currentQIndex === idx ? 'bg-white/20 dark:bg-white/10 border-white/20' : 'hover:bg-white/5'">
-                    <div class="flex justify-between items-start mb-1">
-                        <span class="text-xs font-bold opacity-50" x-text="'Q' + (idx+1)"></span>
-                        <div class="w-2 h-2 rounded-full" :class="item.proficiency > 80 ? 'bg-green-500' : (item.proficiency > 40 ? 'bg-yellow-500' : 'bg-red-500')"></div>
+            <div class="w-full h-full glass-panel flex flex-col overflow-hidden shadow-lg transition-none" 
+                 @contextmenu.prevent="handleContextMenu($event, null, 'blank')">
+                
+                <div class="p-5 border-b border-white/10 bg-white/5 shrink-0 flex justify-between items-start">
+                    <div class="flex-1 min-w-0 mr-2">
+                        <h3 class="font-bold text-lg truncate" x-text="bookData.info?.name || t('loading')"></h3>
+                        <div class="flex flex-wrap gap-1 mt-1">
+                            <template x-for="tag in (bookData.info?.tags || [])">
+                                <span class="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-500 text-[10px] font-bold uppercase" x-text="tag"></span>
+                            </template>
+                        </div>
                     </div>
-                    <div class="text-sm font-medium opacity-80 truncate" x-text="item.summary"></div>
+
+                    <div class="flex items-center gap-1 bg-white/10 rounded-lg p-1">
+                        <button @click="goBack()" :disabled="historyStack.length === 0" class="p-1.5 rounded-md hover:bg-white/20 transition-colors disabled:opacity-30 disabled:cursor-default">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                        </button>
+                        <button @click="goForward()" :disabled="futureStack.length === 0" class="p-1.5 rounded-md hover:bg-white/20 transition-colors disabled:opacity-30 disabled:cursor-default">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </button>
+                    </div>
                 </div>
-            </template>
+
+                <div class="flex-1 overflow-y-auto p-3 space-y-2 no-scrollbar relative">
+                    
+                    <div x-show="loading" class="absolute inset-0 bg-white/50 dark:bg-black/50 backdrop-blur-sm z-10 flex flex-col p-4 space-y-3">
+                        <div class="h-10 bg-gray-200 dark:bg-white/10 rounded-xl animate-pulse"></div>
+                        <div class="h-8 bg-gray-200 dark:bg-white/10 rounded-xl animate-pulse delay-75"></div>
+                        <div class="h-8 bg-gray-200 dark:bg-white/10 rounded-xl animate-pulse delay-100"></div>
+                    </div>
+
+                    <div @click="currentQIndex = -1" 
+                         class="p-3 rounded-xl cursor-pointer transition-all flex items-center gap-3"
+                         :class="currentQIndex === -1 ? 'bg-blue-500 text-white shadow-lg' : 'hover:bg-white/10 dark:hover:bg-white/5'">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                        <div class="flex-1">
+                            <div class="text-sm font-bold" x-text="t('overview')">Overview</div>
+                            <div class="text-[10px] opacity-60">Analysis & Stats</div>
+                        </div>
+                    </div>
+                    
+                    <div x-show="bookData.sub_notebooks && bookData.sub_notebooks.length > 0">
+                         <div class="text-[10px] font-bold uppercase opacity-40 px-3 mt-4 mb-2" x-text="t('folders')">Folders</div>
+                         <template x-for="(sub, idx) in bookData.sub_notebooks" :key="sub.id">
+                             <div @click="loadBook(sub.id)" 
+                                  draggable="true"
+                                  @dragstart="handleDragStart($event, 'folder', idx)"
+                                  @dragend="handleDragEnd($event)"
+                                  @dragover="handleDragOver($event, 'folder', idx)"
+                                  @dragleave="handleDragLeave($event)"
+                                  @drop="handleDrop($event, 'folder', idx)"
+                                  @contextmenu.prevent.stop="handleContextMenu($event, sub, 'folder')"
+                                  class="p-3 rounded-xl cursor-pointer transition-all flex items-center gap-3 hover:bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 border border-transparent select-none group">
+                                 <svg class="w-5 h-5 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"></path></svg>
+                                 <div class="flex-1 min-w-0">
+                                     <div class="text-sm font-bold truncate" x-text="sub.name"></div>
+                                     <div class="text-[10px] opacity-60" x-text="sub.count + t('items_suffix')"> items</div>
+                                 </div>
+                                 <svg class="w-4 h-4 opacity-0 group-hover:opacity-30 cursor-grab" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                             </div>
+                         </template>
+                    </div>
+
+                    <div class="h-px bg-white/10 my-2"></div>
+                    
+                    <div x-show="bookData.questions && bookData.questions.length > 0">
+                        <div class="text-[10px] font-bold uppercase opacity-40 px-3 mb-2" x-text="t('questions_list')">Questions</div>
+                        <template x-for="(item, idx) in bookData.questions" :key="item.id">
+                            <div @click="jumpToQuestion(idx)" 
+                                 draggable="true"
+                                 @dragstart="handleDragStart($event, 'question', idx)"
+                                 @dragend="handleDragEnd($event)"
+                                 @dragover="handleDragOver($event, 'question', idx)"
+                                 @dragleave="handleDragLeave($event)"
+                                 @drop="handleDrop($event, 'question', idx)"
+                                 @contextmenu.prevent.stop="handleContextMenu($event, item, 'question')"
+                                 class="p-3 rounded-xl cursor-pointer transition-all group border border-transparent hover:border-white/10 select-none flex items-start gap-3"
+                                 :class="currentQIndex === idx ? 'bg-white/20 dark:bg-white/10 border-white/20' : 'hover:bg-white/5'">
+                                
+                                <div class="mt-1.5 w-2 h-2 rounded-full shrink-0" :class="item.proficiency > 80 ? 'bg-green-500' : (item.proficiency > 40 ? 'bg-yellow-500' : 'bg-red-500')"></div>
+                                
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex justify-between items-center mb-0.5">
+                                        <span class="text-[10px] font-bold opacity-50 uppercase" x-text="item.id"></span>
+                                        <svg class="w-3 h-3 opacity-0 group-hover:opacity-30 cursor-grab" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                                    </div>
+                                    <div class="text-sm font-medium opacity-80 truncate leading-tight" x-text="item.summary"></div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div x-show="(!bookData.sub_notebooks || bookData.sub_notebooks.length === 0) && (!bookData.questions || bookData.questions.length === 0) && !loading" 
+                         class="py-10 flex flex-col items-center justify-center opacity-30">
+                        <svg class="w-10 h-10 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
+                        <span class="text-xs font-bold">No Items</span>
+                        <span class="text-[10px] mt-1">Right click to add folder</span>
+                    </div>
+                    
+                    <div class="h-20 w-full"></div>
+                </div>
+            </div>
         </div>
     </div>
 </template>
