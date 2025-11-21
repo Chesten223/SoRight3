@@ -81,25 +81,21 @@ class QuestionService:
     # --- [NEW] 笔记系统逻辑 (智能上下文版) ---
     def get_note_view(self, node_id="root"):
         """
-        获取视图数据。
-        - 如果是文件夹：返回该文件夹下的子项。
-        - 如果是文件：返回该文件内容，同时返回**同级兄弟文件**列表（用于侧边栏显示）。
+        [修改版] 获取视图数据
+        新增：backlinks 字段 (谁引用了当前笔记)
         """
         node = self.user_data['notes'].get(node_id)
         if not node: return {"error": "Not found"}
         
-        # 1. 确定列表的数据源 (List Source)
-        # 如果当前是文件夹，列表就是它的孩子
-        # 如果当前是文件，列表就是它的兄弟 (它父节点的孩子)
-        list_source_id = node_id if node.get('type') == 'folder' else node.get('parent')
+        # ... (原有的 breadcrumbs 和 items 构建逻辑保持不变，为了节省篇幅省略，请保留原代码) ...
+        # ... 这里请保留你原来的 list_source_id, items, breadcrumbs, content 逻辑 ...
         
-        # 如果是根节点的文件（极少情况），父节点为空，做容错
-        if not list_source_id and node.get('type') == 'file':
-            list_source_id = 'root' # 此时无法获取兄弟，或者 fallback 到 root
-
+        # ---------------------------------------------------------
+        # 复制你原来的逻辑 (为了上下文完整，我这里简写，请确保不要删掉原来的逻辑)
+        list_source_id = node_id if node.get('type') == 'folder' else node.get('parent')
+        if not list_source_id and node.get('type') == 'file': list_source_id = 'root'
         list_source_node = self.user_data['notes'].get(list_source_id)
         
-        # 2. 构建列表 (Items)
         items = []
         if list_source_node:
             for cid in list_source_node.get('children', []):
@@ -112,21 +108,35 @@ class QuestionService:
                         "preview": child.get('content', '')[:50] if child.get('type') == 'file' else ""
                     })
         
-        # 3. 构建面包屑 (Breadcrumbs)
         breadcrumbs = []
-        curr = list_source_node # 面包屑一直显示到文件夹层级
+        curr = list_source_node
         while curr:
             breadcrumbs.insert(0, {"id": curr['id'], "name": curr['name']})
             curr = self.user_data['notes'].get(curr.get('parent'))
             
-        # 4. 获取文件内容 (Content)
         content = node.get('content', '') if node.get('type') == 'file' else None
-        
+        # ---------------------------------------------------------
+
+        # [新增] 计算反向链接 (Backlinks)
+        backlinks = []
+        if node.get('type') == 'file':
+            target_link = f"[[note:{node_id}]]" # 搜索目标
+            for other_id, other_node in self.user_data['notes'].items():
+                if other_node.get('type') == 'file' and other_id != node_id:
+                    # 简单的字符串包含检查
+                    if target_link in (other_node.get('content') or ""):
+                        backlinks.append({
+                            "id": other_id,
+                            "name": other_node['name'],
+                            "preview": (other_node.get('content') or "")[:60] + "..."
+                        })
+
         return {
             "info": {"id": node['id'], "name": node['name'], "type": node.get('type', 'folder')},
             "items": items,
             "breadcrumbs": breadcrumbs,
-            "content": content
+            "content": content,
+            "backlinks": backlinks # 新增字段
         }
 
     def create_note_item(self, name, type="folder", parent_id="root"):
@@ -154,6 +164,69 @@ class QuestionService:
         self._save_user_data()
         return True
 
+    def rename_note_item(self, note_id, new_name):
+        if note_id not in self.user_data['notes']: return False
+        self.user_data['notes'][note_id]['name'] = new_name
+        self._save_user_data()
+        return True
+
+    def delete_note_item(self, note_id):
+        """删除笔记或文件夹（及其子项）"""
+        if note_id not in self.user_data['notes'] or note_id == 'root': return False
+        
+        target = self.user_data['notes'][note_id]
+        parent_id = target['parent']
+        
+        # 1. 从父节点的 children 中移除
+        if parent_id and parent_id in self.user_data['notes']:
+            if note_id in self.user_data['notes'][parent_id]['children']:
+                self.user_data['notes'][parent_id]['children'].remove(note_id)
+
+        # 2. 递归删除自身及子项 (简单实现：只删引用，残留数据暂不清理，或递归清理)
+        # 为了数据整洁，建议递归清理：
+        def recursive_delete(nid):
+            if nid not in self.user_data['notes']: return
+            node = self.user_data['notes'][nid]
+            if node.get('children'):
+                for child_id in list(node['children']):
+                    recursive_delete(child_id)
+            del self.user_data['notes'][nid]
+
+        recursive_delete(note_id)
+        self._save_user_data()
+        return True
+
+    def move_note_item(self, note_id, new_parent_id):
+        """移动笔记/文件夹"""
+        if note_id not in self.user_data['notes'] or new_parent_id not in self.user_data['notes']: return False
+        if note_id == 'root': return False
+        
+        target = self.user_data['notes'][note_id]
+        old_parent_id = target['parent']
+        
+        # 检查循环引用（不能移动到自己的子孙节点下）
+        def is_descendant(parent, child):
+            if parent == child: return True
+            node = self.user_data['notes'][parent]
+            if not node.get('children'): return False
+            for c in node['children']:
+                if is_descendant(c, child): return True
+            return False
+
+        if is_descendant(note_id, new_parent_id): return False # 目标是自己的子孙，禁止
+
+        # 1. 从旧父节点移除
+        if old_parent_id in self.user_data['notes']:
+            if note_id in self.user_data['notes'][old_parent_id]['children']:
+                self.user_data['notes'][old_parent_id]['children'].remove(note_id)
+        
+        # 2. 加入新父节点
+        self.user_data['notes'][new_parent_id]['children'].append(note_id)
+        target['parent'] = new_parent_id
+        
+        self._save_user_data()
+        return True
+
     # --- [模块 2] 错题本逻辑 (Notebook System) ---
     
     def _get_all_questions_recursive(self, notebook_id, accumulated_tags=None):
@@ -174,70 +247,84 @@ class QuestionService:
         return all_q_ids, node.get('children', [])
 
     def get_notebook_view(self, notebook_id="root"):
-        """生成错题本的视图数据（统计、子目录、题目列表）"""
+        """
+        [修正版] 获取错题本视图
+        - 统计数据 (Stats): 递归计算 (包含所有子文件夹数据)
+        - 列表数据 (Questions): 仅返回当前层级的直属题目 (解决显示杂乱问题)
+        """
         node = self.user_data['notebooks'].get(notebook_id)
         if not node: return {"error": "Not found"}
         
-        # 获取所有题目（递归）
-        raw_items, _ = self._get_all_questions_recursive(notebook_id)
+        # 1. 递归计算统计数据 (Stats) - 保持不变，为了看总数
+        all_recursive_items, _ = self._get_all_questions_recursive(notebook_id)
         
-        questions = []
         stats = {"errors": 0, "proficiency": 0, "tags": {}}
         
-        for item in raw_items:
-            q = self.get_question_by_id(item['id'])
-            if not q: continue
-            
+        # 计算递归统计
+        for item in all_recursive_items:
             metrics = self.user_data['metrics'].get(item['id'], {"errors": 0, "proficiency": 0})
-            
-            # 合并原生 Tag 和 自定义继承 Tag
-            final_tags = list(set(q.get('tags', []) + item['tags']))
-            
-            # 统计逻辑
             stats['errors'] += metrics['errors']
             stats['proficiency'] += metrics['proficiency']
-            for t in final_tags:
+            for t in item['tags']:
                 stats['tags'][t] = stats['tags'].get(t, 0) + 1
             
-            questions.append({
-                "id": item['id'],
-                "summary": q['content'][:20].replace('<p>', '').replace('</p>', '') + "...",
+        # 2. [关键修改] 仅获取当前直属题目 (Direct Children Only)
+        # 之前的代码这里用了 raw_items (递归数据)，导致题目重复显示
+        current_level_questions = []
+        
+        # node['questions'] 存储的是当前笔记本直属的题目ID列表
+        for q_id in node['questions']:
+            q = self.get_question_by_id(q_id)
+            if not q: continue
+            
+            metrics = self.user_data['metrics'].get(q_id, {"errors": 0, "proficiency": 0})
+            
+            # 合并 Tag: 题目原生 Tag + 笔记本继承 Tag
+            # 注意：这里只取当前笔记本的 tags，不再递归累加父级 tags，保持界面清爽
+            final_tags = list(set(q.get('tags', []) + node.get('tags', [])))
+            
+            current_level_questions.append({
+                "id": q['id'],
+                "summary": q['content'][:30].replace('<p>', '').replace('</p>', '') + "...", # 稍微加长预览
                 "tags": final_tags, 
                 "proficiency": metrics['proficiency']
             })
-            
-        # 子目录列表
+
+        # 3. 获取子笔记本列表
         sub_notebooks = []
         for child_id in node['children']:
             child = self.user_data['notebooks'].get(child_id)
             if child:
+                # 这里 count 我们显示它下面的直属题目数，或者递归数都可以，这里显示直属
                 sub_notebooks.append({
                     "id": child['id'],
                     "name": child['name'],
                     "tags": child['tags'],
-                    "count": len(child['questions']) # 仅显示直属题目数
+                    "count": len(child['questions']) 
                 })
 
-        # 面包屑导航
+        # 4. 构建面包屑
         breadcrumbs = []
         curr = node
         while curr:
             breadcrumbs.insert(0, {"id": curr['id'], "name": curr['name']})
-            curr = self.user_data['notebooks'].get(curr['parent'])
+            curr = self.user_data['notebooks'].get(curr.get('parent')) # 使用 get 防止报错
 
-        avg_prof = int(stats['proficiency'] / len(questions)) if questions else 0
+        # 计算平均熟练度
+        total_count = len(all_recursive_items) # 统计用总数
+        avg_prof = int(stats['proficiency'] / total_count) if total_count > 0 else 0
         sorted_tags = sorted(stats['tags'].items(), key=lambda x: x[1], reverse=True)[:8]
 
         return {
             "info": {"id": node['id'], "name": node['name'], "tags": node['tags']},
             "stats": {
-                "total": len(questions),
+                "total": total_count, # 这里的 Total 显示的是整个分支的总题数
                 "avg_prof": avg_prof,
                 "errors": stats['errors'],
                 "top_tags": [{"name": k, "count": v} for k,v in sorted_tags]
             },
             "sub_notebooks": sub_notebooks,
-            "questions": questions,
+            "questions": current_level_questions, # 这里的 questions 只包含当前层级
             "breadcrumbs": breadcrumbs
         }
 
@@ -434,4 +521,145 @@ class QuestionService:
             "top_books": root_children
         }
 
+    def reorder_note_children(self, parent_id, new_order_ids):
+        """更新子节点顺序"""
+        if parent_id not in self.user_data['notes']: return False
+        # 确保 new_order_ids 里的 ID 确实都在原来的 children 里 (安全检查)
+        current_children = set(self.user_data['notes'][parent_id]['children'])
+        safe_new_order = [nid for nid in new_order_ids if nid in current_children]
+        
+        # 如果有遗漏（比如新建的没传过来），补在后面
+        for nid in self.user_data['notes'][parent_id]['children']:
+            if nid not in safe_new_order:
+                safe_new_order.append(nid)
+                
+        self.user_data['notes'][parent_id]['children'] = safe_new_order
+        self._save_user_data()
+        return True
+    # --- [新增] 笔记搜索与反链逻辑 ---
+    
+    def search_notes(self, query):
+        """搜索笔记（用于插入链接）"""
+        results = []
+        query = query.lower().strip()
+        for nid, node in self.user_data['notes'].items():
+            if node.get('type') == 'file' and nid != 'root':
+                if query in node['name'].lower():
+                    results.append({"id": nid, "name": node['name'], "preview": node.get('content', '')[:30]})
+        return results[:10] # 只返回前10个
+
+    def sort_note_children(self, parent_id, sort_by='name'):
+        """按规则排序: name 或 time"""
+        if parent_id not in self.user_data['notes']: return False
+        children_ids = self.user_data['notes'][parent_id]['children']
+        
+        def get_sort_key(nid):
+            node = self.user_data['notes'].get(nid)
+            if not node: return ""
+            if sort_by == 'time': return node.get('created_at', 0)
+            return node.get('name', '').lower()
+
+        # 文件夹排前面逻辑（可选，这里统一排）
+        children_ids.sort(key=get_sort_key, reverse=(sort_by=='time')) # 时间倒序，名称正序
+        
+        self.user_data['notes'][parent_id]['children'] = children_ids
+        self._save_user_data()
+        return True
+
+
+    # --- [NEW] 错题本管理 (重命名/删除/移动/排序) ---
+    
+    def rename_notebook(self, book_id, new_name):
+        if book_id not in self.user_data['notebooks']: return False
+        self.user_data['notebooks'][book_id]['name'] = new_name
+        self._save_user_data()
+        return True
+
+    def delete_notebook(self, book_id):
+        """删除错题本（及其子本），里面的题目引用也会消失"""
+        if book_id not in self.user_data['notebooks'] or book_id == 'root': return False
+        
+        target = self.user_data['notebooks'][book_id]
+        parent_id = target['parent']
+        
+        # 1. 从父节点移除
+        if parent_id and parent_id in self.user_data['notebooks']:
+            if book_id in self.user_data['notebooks'][parent_id]['children']:
+                self.user_data['notebooks'][parent_id]['children'].remove(book_id)
+        
+        # 2. 递归删除数据
+        def recursive_del(bid):
+            if bid not in self.user_data['notebooks']: return
+            node = self.user_data['notebooks'][bid]
+            for child in list(node['children']):
+                recursive_del(child)
+            del self.user_data['notebooks'][bid]
+            
+        recursive_del(book_id)
+        self._save_user_data()
+        return True
+
+    def move_notebook(self, book_id, new_parent_id):
+        if book_id not in self.user_data['notebooks'] or new_parent_id not in self.user_data['notebooks']: return False
+        if book_id == 'root': return False
+        
+        # 检查死循环（不能移到自己子孙里）
+        def is_descendant(parent, child):
+            if parent == child: return True
+            node = self.user_data['notebooks'][parent]
+            for c in node['children']:
+                if is_descendant(c, child): return True
+            return False
+            
+        if is_descendant(book_id, new_parent_id): return False
+
+        # 1. 从旧父节点移除
+        target = self.user_data['notebooks'][book_id]
+        old_parent = target['parent']
+        if old_parent in self.user_data['notebooks']:
+            if book_id in self.user_data['notebooks'][old_parent]['children']:
+                self.user_data['notebooks'][old_parent]['children'].remove(book_id)
+        
+        # 2. 加入新父节点
+        self.user_data['notebooks'][new_parent_id]['children'].append(book_id)
+        target['parent'] = new_parent_id
+        self._save_user_data()
+        return True
+
+    def reorder_notebook_content(self, book_id, sub_order=None, q_order=None):
+        """排序：分别处理子文件夹顺序和题目顺序"""
+        if book_id not in self.user_data['notebooks']: return False
+        node = self.user_data['notebooks'][book_id]
+        
+        if sub_order is not None:
+            # 简单的交集校验，防止数据丢失
+            valid_ids = [i for i in sub_order if i in node['children']]
+            for i in node['children']: # 把没传过来的补后面
+                if i not in valid_ids: valid_ids.append(i)
+            node['children'] = valid_ids
+            
+        if q_order is not None:
+            valid_qs = [q for q in q_order if q in node['questions']]
+            for q in node['questions']: 
+                if q not in valid_qs: valid_qs.append(q)
+            node['questions'] = valid_qs
+            
+        self._save_user_data()
+        return True
+
+    # --- [NEW] 关联查询：找引用了某题目的笔记 ---
+    def find_notes_by_question(self, q_id):
+        related = []
+        ref_tag = f"[[{q_id}]]" # 笔记里引用题目的格式
+        
+        for nid, node in self.user_data['notes'].items():
+            if node.get('type') == 'file':
+                content = node.get('content', '')
+                if ref_tag in content:
+                    related.append({
+                        "id": nid,
+                        "name": node['name'],
+                        "preview": content[:60] + "..."
+                    })
+        return related
 service = QuestionService()

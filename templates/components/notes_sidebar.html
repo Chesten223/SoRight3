@@ -1,48 +1,65 @@
-<div class="w-72 h-full glass-panel ml-4 mb-4 flex flex-col overflow-hidden z-30 border-r border-white/10 relative animate-fade-in transition-all duration-500 ease-spring">
-    <div class="p-5 border-b border-white/10 bg-white/5 flex justify-between items-center backdrop-blur-md">
-        <div>
-            <h3 class="font-bold text-lg truncate max-w-[150px]" x-text="viewData.breadcrumbs[viewData.breadcrumbs.length-1]?.name || 'Library'"></h3>
-            <div class="flex items-center gap-2 mt-1">
-                <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                <p class="text-xs opacity-50 font-medium uppercase tracking-wider">Explorer</p>
-            </div>
-        </div>
-        <button @click="showCreateModal = true" class="p-2 bg-white/5 hover:bg-blue-500 hover:text-white rounded-lg transition-all duration-300 shadow-sm group" title="New Item">
-            <svg class="w-5 h-5 group-hover:rotate-90 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-        </button>
-    </div>
+<div class="w-72 ml-4 shrink-0 hidden md:block"></div>
 
-    <div class="flex-1 overflow-y-auto p-3 space-y-2 no-scrollbar">
+<div class="fixed top-20 left-4 bottom-4 w-72 z-30 flex flex-col" style="transform: translate3d(0,0,0); -webkit-font-smoothing: antialiased;">
+    
+    <div class="w-full h-full glass-panel flex flex-col overflow-hidden shadow-lg transition-none" @contextmenu.prevent="handleBlankContextMenu($event)">
         
-        <div x-show="viewData.breadcrumbs.length > 1" 
-             @click="loadNote(viewData.breadcrumbs[viewData.breadcrumbs.length - 2].id)"
-             class="p-2 px-4 rounded-xl cursor-pointer hover:bg-white/10 flex items-center gap-2 opacity-60 hover:opacity-100 text-xs font-bold mb-2 transition-all">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-            Back
-        </div>
-
-        <template x-for="item in viewData.items" :key="item.id">
-            <div @click="loadNote(item.id)" 
-                 class="p-3 rounded-xl cursor-pointer transition-all duration-300 ease-spring flex items-center gap-3 border border-transparent group hover:scale-[1.02] hover:shadow-md"
-                 :class="viewData.info.id === item.id ? 'bg-blue-500 text-white shadow-lg' : 'hover:bg-white/40 dark:hover:bg-white/10 hover:border-white/20'">
-                
-                <div class="w-8 h-8 rounded-lg flex items-center justify-center transition-colors" 
-                     :class="viewData.info.id === item.id ? 'bg-white/20 text-white' : (item.type === 'folder' ? 'bg-blue-500/10 text-blue-500 group-hover:bg-blue-500 group-hover:text-white' : 'bg-green-500/10 text-green-600 group-hover:bg-green-500 group-hover:text-white')">
-                     
-                     <svg x-show="item.type === 'folder'" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"></path></svg>
-                     <svg x-show="item.type === 'file'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 01-2-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                </div>
-                
-                <div class="flex-1 min-w-0">
-                    <div class="text-sm font-bold truncate" x-text="item.name"></div>
-                    <div class="text-[10px] truncate opacity-60" x-text="item.preview || (item.type === 'folder' ? 'Folder' : 'Empty')"></div>
+        <div class="p-5 border-b border-white/10 bg-white/5 flex justify-between items-center backdrop-blur-md shrink-0">
+            <div>
+                <h3 class="font-bold text-lg truncate max-w-[150px]" x-text="viewData.breadcrumbs[viewData.breadcrumbs.length-1]?.name || 'Library'"></h3>
+                <div class="flex items-center gap-2 mt-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                    <p class="text-xs opacity-50 font-medium uppercase tracking-wider">Explorer</p>
                 </div>
             </div>
-        </template>
-        
-        <div x-show="viewData.items.length === 0" class="flex flex-col items-center justify-center p-10 opacity-30">
-            <svg class="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
-            <span class="text-xs font-bold">Empty</span>
+            <button @click="showCreateModal = true" class="p-2 bg-white/5 hover:bg-blue-500 hover:text-white rounded-lg transition-colors shadow-sm group" title="New Item">
+                <svg class="w-5 h-5 group-hover:rotate-90 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-3 space-y-2 no-scrollbar relative">
+            
+            <div x-show="viewData.breadcrumbs.length > 1" 
+                 @click="loadNote(viewData.breadcrumbs[viewData.breadcrumbs.length - 2].id)"
+                 class="p-2 px-4 rounded-xl cursor-pointer hover:bg-white/10 flex items-center gap-2 opacity-60 hover:opacity-100 text-xs font-bold mb-2 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                Back
+            </div>
+
+            <template x-for="(item, idx) in viewData.items" :key="item.id">
+                <div :id="'note-item-' + idx"
+                     draggable="true"
+                     @dragstart="handleDragStart($event, idx)"
+                     @dragend="handleDragEnd($event)"
+                     @dragover="handleDragOver($event, idx)"
+                     @dragleave="handleDragLeave($event, idx)"
+                     @drop="handleDrop($event, idx)"
+                     @click="loadNote(item.id)" 
+                     @contextmenu.prevent.stop="handleContextMenu($event, item)"
+                     class="p-3 rounded-xl cursor-pointer transition-all duration-200 flex items-center gap-3 border border-transparent group hover:shadow-md select-none"
+                     :class="viewData.info.id === item.id ? 'bg-blue-500 text-white shadow-lg' : 'hover:bg-white/40 dark:hover:bg-white/10 hover:border-white/20'">
+                    
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center transition-colors shrink-0" 
+                         :class="viewData.info.id === item.id ? 'bg-white/20 text-white' : (item.type === 'folder' ? 'bg-blue-500/10 text-blue-500 group-hover:bg-blue-500 group-hover:text-white' : 'bg-green-500/10 text-green-600 group-hover:bg-green-500 group-hover:text-white')">
+                         <svg x-show="item.type === 'folder'" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"></path></svg>
+                         <svg x-show="item.type === 'file'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 01-2-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    </div>
+                    
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-bold truncate" x-text="item.name"></div>
+                        <div class="text-[10px] truncate opacity-60" x-text="item.preview || (item.type === 'folder' ? 'Folder' : 'Empty')"></div>
+                    </div>
+                    
+                    <svg class="w-4 h-4 opacity-0 group-hover:opacity-30 cursor-grab" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                </div>
+            </template>
+            
+            <div x-show="viewData.items.length === 0" class="flex flex-col items-center justify-center p-10 opacity-30">
+                <svg class="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
+                <span class="text-xs font-bold">Empty</span>
+            </div>
+            
+            <div class="h-20 w-full"></div>
         </div>
     </div>
 </div>

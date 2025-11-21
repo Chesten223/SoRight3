@@ -9,14 +9,11 @@ document.addEventListener('alpine:init', () => {
         
         init() {
             // ================= [用户自定义区] =================
-            // 在这里输入你找到的链接。支持 MP3 直链、Icecast/Shoutcast 流地址。
-            
             const myRadios = [
                 { 
                     title: "Lofi HipHop Radio", 
                     artist: "Lofi Girl Mirror", 
                     type: 'radio', 
-                    // 这是一个非常稳定的 Lofi 流
                     url: "http://stream.zeno.fm/0r0xa792kwzuv", 
                     cover: "https://i.scdn.co/image/ab67616d0000b273538e4b4443b8b93027144d4f" 
                 },
@@ -65,34 +62,25 @@ document.addEventListener('alpine:init', () => {
             this.list = this.fullList;
         },
         
-        // 播放指定索引
         playAtIndex(index) {
             const track = this.list[index];
             this.addToHistory(track);
             document.dispatchEvent(new CustomEvent('play-track', { detail: { index: index } }));
         },
 
-        // 播放特定 Track 对象（用于从历史/收藏列表反向查找播放）
         playTrackObject(track) {
-            // 尝试在主列表中找到它
             let idx = this.list.findIndex(t => t.url === track.url);
-            
-            // 如果找不到（比如以前的歌现在删了），临时加到列表末尾播放
             if (idx === -1) {
                 this.list.push(track);
                 idx = this.list.length - 1;
             }
-            
             this.playAtIndex(idx);
         },
         
         addToHistory(track) {
             if (!track) return;
-            // 去重：先删掉旧的同名记录
             this.history = this.history.filter(t => t.url !== track.url);
-            // 加到最前
             this.history.unshift(track);
-            // 只保留最近 20 首
             if (this.history.length > 20) this.history.pop();
             localStorage.setItem('musicHistory', JSON.stringify(this.history));
         },
@@ -107,7 +95,6 @@ document.addEventListener('alpine:init', () => {
         }
     });
     
-    // 初始化
     Alpine.store('musicStore').init();
 
 
@@ -135,12 +122,10 @@ document.addEventListener('alpine:init', () => {
             playing: "Now Playing",
             exit: "Exit",
             ai_assist: "AI Assist",
-            // Music
             tab_all: "Library",
             tab_noise: "White Noise",
             tab_fav: "Favorites",
             tab_history: "History",
-            // Quiz
             overview: "Overview",
             folders: "Folders",
             questions_list: "Questions",
@@ -199,12 +184,10 @@ document.addEventListener('alpine:init', () => {
             playing: "正在播放",
             exit: "退出",
             ai_assist: "AI 助教",
-            // Music
             tab_all: "电台与白噪音",
             tab_noise: "纯净白噪音",
             tab_fav: "我的收藏",
             tab_history: "播放历史",
-            // Quiz
             overview: "数据概览",
             folders: "子目录",
             questions_list: "题目列表",
@@ -272,10 +255,8 @@ document.addEventListener('alpine:init', () => {
             this.checkPomoStatus();
             this.requestNotifyPermission();
 
-            // 监听播放事件：从任意地方切歌
             document.addEventListener('play-track', (e) => {
                 this.music.currentIdx = e.detail.index;
-                // 强制重置播放器状态，触发 watch
                 this.music.isPlaying = false; 
                 this.$nextTick(() => this.togglePlay(true));
             });
@@ -305,20 +286,18 @@ document.addEventListener('alpine:init', () => {
             else root.classList.remove('dark');
         },
 
-        // 音乐控制逻辑
         toggleMusicMode() {
             const modes = ['sequence', 'loop', 'shuffle'];
             this.music.mode = modes[(modes.indexOf(this.music.mode) + 1) % modes.length];
         },
         
-        // 稳健的播放控制
         async togglePlay(forcePlay = false) {
             const audio = this.$refs.audioPlayer;
             if (!audio) return;
 
             try {
                 if (forcePlay) {
-                    audio.load(); // 关键：切换源时必须重载
+                    audio.load();
                     await audio.play();
                     this.music.isPlaying = true;
                 } else {
@@ -332,7 +311,6 @@ document.addEventListener('alpine:init', () => {
                 }
             } catch (err) {
                 if (err.name === 'AbortError') {
-                    // 忽略快速切歌时的打断错误
                 } else if (err.name === 'NotAllowedError') {
                     alert("请点击页面任意位置以激活音频播放。");
                     this.music.isPlaying = false;
@@ -374,7 +352,6 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        // 番茄钟逻辑
         checkPomoStatus() {
             const savedTarget = localStorage.getItem('pomoTargetTime');
             if (savedTarget) {
@@ -440,7 +417,7 @@ document.addEventListener('alpine:init', () => {
         }
     }));
 
-    // --- 5. Music Modal App (弹窗逻辑) ---
+    // --- 5. Music Modal App ---
     Alpine.data('musicModalApp', () => ({
         showMusicModal: false,
         activeTab: 'all',
@@ -450,24 +427,21 @@ document.addEventListener('alpine:init', () => {
             if (this.activeTab === 'noise') return store.fullList.filter(t => t.type === 'noise');
             if (this.activeTab === 'fav') return store.fullList.filter(t => store.favorites.includes(t.url));
             if (this.activeTab === 'history') return store.history;
-            return store.fullList; // Default: All
+            return store.fullList; 
         },
         
         playTrack(track) {
-            // 使用 Store 的 helper 方法播放
             Alpine.store('musicStore').playTrackObject(track);
         },
         
         handleAction(track) {
-            // 这里可以扩展：如果是搜索结果点加号就是添加，如果是库里点爱心就是收藏
-            // 目前只有库模式，所以只做收藏
             Alpine.store('musicStore').toggleFavorite(track.url);
         },
         
         isFav(track) { return Alpine.store('musicStore').favorites.includes(track.url); }
     }));
 
-    // --- 6. Quiz App ---
+    // --- 6. Quiz App (Enhanced: Notebook Mgmt & Related Notes) ---
     Alpine.data('quizApp', (mode, book) => ({
         mode: mode,
         bookId: book,
@@ -482,284 +456,292 @@ document.addEventListener('alpine:init', () => {
         chatHistory: [],
         bookData: { info: {}, stats: {}, sub_notebooks: [], questions: [], breadcrumbs: [] },
         currentQIndex: -1,
+        
+        // Notebook Mgmt States
         showCreateModal: false,
         subBookName: '',
         subBookTags: '',
         showAddToBookModal: false,
         notebooksList: [],
+        
+        // Context Menu & DragDrop
+        ctxMenu: { show: false, x: 0, y: 0, item: null, type: 'folder' }, // 'folder' or 'question'
+        renameModal: { show: false, name: '' },
+        moveModal: { show: false, currentPath: [], items: [], targetId: 'root' },
+        dragSource: null, // { type: 'folder'|'question', index: int }
+        
+        // Related Notes
+        relatedNotes: [],
+        
         notify: { show: false, title: '', msg: '' },
 
         async init() {
             if (this.mode === 'mistake') await this.loadBook(this.bookId);
             else this.loadNext();
+            document.addEventListener('click', () => this.ctxMenu.show = false);
         },
+        
         showToast(titleKey, msgKey) {
+            // 简单兼容直接传字符串的情况
             const lang = localStorage.getItem('appLang') || 'zh';
-            this.notify.title = translations[lang][titleKey] || titleKey;
-            this.notify.msg = translations[lang][msgKey] || msgKey;
+            const t = translations[lang] || translations['en'];
+            this.notify.title = t[titleKey] || titleKey;
+            this.notify.msg = t[msgKey] || msgKey;
             this.notify.show = true;
             setTimeout(() => { this.notify.show = false; }, 2000);
         },
+
         async loadBook(targetId) {
-            this.loading = true;
+            this.loading = true; // 1. 立即开启 loading 遮罩
             this.bookId = targetId;
             this.currentQIndex = -1; 
+            
+            // 2. [关键] 立即清空旧数据，防止渲染残留导致列表跳变
+            this.bookData = { 
+                info: { name: 'Loading...' }, 
+                stats: {}, 
+                sub_notebooks: [], 
+                questions: [], 
+                breadcrumbs: [] 
+            };
+
             try {
                 const res = await fetch(`/api/book_details?book=${targetId}`);
+                if (!res.ok) throw new Error("Failed to load");
+                
+                // 3. 数据回来后一次性更新
                 this.bookData = await res.json();
-            } catch(e) { console.error(e); }
-            finally { this.loading = false; }
+            } catch(e) { 
+                console.error(e); 
+                this.showToast("Error", "Failed to load notebook");
+            } finally { 
+                // 4. 稍微延迟关闭 loading，让渲染更平滑（可选）
+                setTimeout(() => { this.loading = false; }, 50);
+            }
         },
+
+        // --- Drag & Drop Logic ---
+        handleDragStart(e, type, index) {
+            this.dragSource = { type, index };
+            e.dataTransfer.effectAllowed = 'move';
+            e.target.classList.add('opacity-50');
+        },
+        handleDragEnd(e) {
+            e.target.classList.remove('opacity-50');
+            // Clean up visual cues
+            document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over', 'border-blue-500', 'border-dashed'));
+        },
+        handleDragOver(e, type, index) {
+            if (!this.dragSource || this.dragSource.type !== type) return; // Only same type sorting
+            e.preventDefault();
+            e.currentTarget.classList.add('drag-over', 'border-blue-500', 'border-dashed');
+        },
+        handleDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over', 'border-blue-500', 'border-dashed');
+        },
+        async handleDrop(e, targetType, targetIndex) {
+            e.preventDefault();
+            this.handleDragEnd(e);
+            
+            if (!this.dragSource || this.dragSource.type !== targetType || this.dragSource.index === targetIndex) return;
+
+            const listKey = targetType === 'folder' ? 'sub_notebooks' : 'questions';
+            const list = this.bookData[listKey];
+            
+            // 1. Optimistic Update
+            const [moved] = list.splice(this.dragSource.index, 1);
+            list.splice(targetIndex, 0, moved);
+            this.bookData[listKey] = list;
+
+            // 2. Backend Sync
+            const payload = { id: this.bookId };
+            if (targetType === 'folder') payload.sub_order = list.map(i => i.id);
+            else payload.q_order = list.map(i => i.id);
+            
+            await fetch('/api/notebooks/reorder', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+        },
+
+        // --- Context Menu ---
+        handleContextMenu(e, item, type) {
+            this.ctxMenu.item = item;
+            this.ctxMenu.type = type;
+            this.ctxMenu.x = e.clientX;
+            this.ctxMenu.y = e.clientY;
+            this.ctxMenu.show = true;
+        },
+        
+        // --- Rename ---
+        openRenameModal() { 
+            this.renameModal.name = this.ctxMenu.item.name; 
+            this.renameModal.show = true; 
+            this.ctxMenu.show = false; 
+        },
+        async confirmRename() {
+            if (!this.renameModal.name.trim()) return;
+            const res = await fetch('/api/notebooks/rename', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id: this.ctxMenu.item.id, name: this.renameModal.name }) });
+            if ((await res.json()).success) {
+                this.showToast("toast_success", "Renamed");
+                this.renameModal.show = false;
+                this.loadBook(this.bookId);
+            }
+        },
+
+        // --- Delete ---
+        async deleteItem() {
+            if(!confirm("Are you sure you want to delete this?")) return;
+            // 如果是文件夹调用 delete_notebook，如果是题目暂未实现（可加 remove 接口）
+            // 暂时只实现文件夹删除
+            if (this.ctxMenu.type === 'folder') {
+                const res = await fetch('/api/notebooks/delete', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id: this.ctxMenu.item.id }) });
+                if ((await res.json()).success) {
+                    this.ctxMenu.show = false;
+                    this.loadBook(this.bookId);
+                }
+            }
+        },
+
+        // --- Move (Folders Only for now) ---
+        async openMoveModal() {
+            this.ctxMenu.show = false;
+            this.moveModal.show = true;
+            await this.loadMovePicker('root');
+        },
+        async loadMovePicker(folderId) {
+            const res = await fetch(`/api/book_details?book=${folderId}`);
+            const data = await res.json();
+            this.moveModal.items = data.sub_notebooks || [];
+            this.moveModal.currentPath = data.breadcrumbs || [];
+            this.moveModal.targetId = folderId;
+        },
+        async confirmMove() {
+            if (this.moveModal.targetId === this.ctxMenu.item.id) return;
+            const res = await fetch('/api/notebooks/move', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id: this.ctxMenu.item.id, parent: this.moveModal.targetId }) });
+            if ((await res.json()).success) {
+                this.showToast("toast_success", "Moved");
+                this.moveModal.show = false;
+                this.loadBook(this.bookId);
+            }
+        },
+
+        // --- Related Notes Logic ---
+        async fetchRelatedNotes() {
+            this.relatedNotes = [];
+            if (!this.question.id) return;
+            const res = await fetch(`/api/get_related_notes?q_id=${this.question.id}`);
+            this.relatedNotes = await res.json();
+        },
+        
+        // --- Standard Quiz Functions (Modified) ---
         async jumpToQuestion(index) {
             this.currentQIndex = index;
             await this.loadNext(this.bookData.questions[index].id);
         },
-        createSubBook() { this.subBookName = ''; this.subBookTags = ''; this.showCreateModal = true; },
-        async confirmCreateSubBook() {
-            if (!this.subBookName.trim()) return;
-            const res = await fetch('/api/create_book', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ name: this.subBookName, parent: this.bookId, tags: this.subBookTags }) });
-            const data = await res.json();
-            if (data.success) { this.showCreateModal = false; this.loadBook(this.bookId); this.showToast('toast_success', 'toast_folder_created'); } 
-            else alert(data.msg);
-        },
-        async openAddToBookModal() {
-            const res = await fetch('/api/get_notebooks');
-            this.notebooksList = await res.json();
-            this.showAddToBookModal = true;
-        },
-        async addToBook(targetBookId) {
-            const res = await fetch('/api/add_to_book', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ book_id: targetBookId, q_id: this.question.id }) });
-            const data = await res.json();
-            if(data.success) { this.showAddToBookModal = false; this.showToast('toast_saved', 'toast_added'); } else { alert("Failed."); }
-        },
-        toggleAI() { this.aiOpen = !this.aiOpen; },
-        selectOption(id) { if(!this.submitted) this.selectedOption = id; },
         async loadNext(targetId=null) {
             this.loading = true;
             this.showExplanation = false;
+            this.relatedNotes = []; // Clear previous notes
+            
             if (this.mode === 'mistake' && !targetId) {
                 this.currentQIndex++;
                 if (this.currentQIndex >= this.bookData.questions.length) { this.showToast('toast_complete', 'toast_finished'); this.currentQIndex = -1; this.loading = false; return; }
                 targetId = this.bookData.questions[this.currentQIndex].id;
             }
             setTimeout(async () => {
-                this.submitted = false;
-                this.selectedOption = null;
-                this.feedback = {};
+                this.submitted = false; this.selectedOption = null; this.feedback = {};
                 let url = `/api/get_question?mode=${this.mode}`;
                 if (targetId) url += `&q_id=${targetId}`;
                 if (this.mode === 'mistake') url += `&book=${this.bookId}`;
                 try {
                     const res = await fetch(url);
-                    if(!res.ok) { if(this.mode === 'mistake') { this.showToast('toast_empty', 'toast_no_qs'); this.currentQIndex = -1; return; } alert("Error loading question"); return; }
+                    if(!res.ok) { if(this.mode === 'mistake') { this.showToast('toast_empty', 'toast_no_qs'); this.currentQIndex = -1; return; } alert("Error"); return; }
                     this.question = await res.json();
                 } catch(e) { console.error(e); }
                 finally { this.loading = false; this.$nextTick(() => { if(window.MathJax) MathJax.typesetPromise(); }); }
             }, 300);
         },
-        getOptionClass(id) {
-            let base = 'backdrop-blur-md shadow-sm transition-all duration-200 cursor-pointer overflow-hidden border border-transparent hover:scale-[1.01] active:scale-[0.99] ';
-            let theme = 'bg-white/70 hover:bg-white/90 dark:bg-black/20 dark:hover:bg-white/5 dark:border-gray-700 ';
-            if (this.selectedOption === id && !this.submitted) return 'bg-blue-500/10 border-blue-500 text-blue-700 dark:text-blue-400 ring-1 ring-blue-500 shadow-md ' + base;
-            if (this.submitted) {
-                if (id === this.feedback.correct_id) return 'bg-green-500/20 border-green-500 text-green-800 dark:text-green-400 ' + base;
-                if (id === this.selectedOption) return 'bg-red-500/20 border-red-500 text-red-800 dark:text-red-400 ' + base;
-                return theme + 'opacity-40 grayscale ' + base;
-            }
-            return theme + base;
-        },
-        getOptionCircleClass(id) {
-            if (this.selectedOption === id && !this.submitted) return 'border-blue-500 text-blue-500 bg-transparent';
-            if (this.submitted && id === this.feedback.correct_id) return 'border-green-500 bg-green-500 text-white';
-            if (this.submitted && id === this.selectedOption) return 'border-red-500 bg-red-500 text-white';
-            return 'border-gray-300 dark:border-gray-600 text-gray-400';
-        },
+        
         async submit() {
             if(!this.selectedOption) return;
             const res = await fetch('/api/submit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ q_id: this.question.id, choice: this.selectedOption }) });
             this.feedback = await res.json();
             this.submitted = true;
             this.$nextTick(() => { if(window.MathJax) MathJax.typesetPromise(); });
+            
+            // Fetch related notes immediately upon submission (so they are ready when Analysis is clicked)
+            this.fetchRelatedNotes();
+            
             if (!this.feedback.is_correct) setTimeout(() => { this.showExplanation = true; }, 800);
         },
-        async sendMessage() {
-            if(!this.userMsg.trim()) return;
-            const txt = this.userMsg; this.userMsg = '';
-            this.chatHistory.push({ role: 'user', text: txt });
-            const res = await fetch('/api/ai_chat', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ message: txt, context: this.question.ai_context }) });
-            const data = await res.json();
-            this.chatHistory.push({ role: 'ai', text: data.reply });
-        }
-    }));
-    // --- 7. Notes App (Final) ---
-    Alpine.data('notesApp', (initialId) => ({
-        noteId: initialId,
-        viewData: { info: {}, items: [], breadcrumbs: [] },
-        editorContent: '',
-        renderedContent: '',
-        viewMode: 'read', 
         
-        showCreateModal: false,
-        newItemName: '',
-        newItemType: 'file',
-        
-        // Question Picker Logic
-        showQuestionPicker: false,
-        pickerData: { sub_notebooks: [], questions: [], breadcrumbs: [] },
-        
-        showRefModal: false,
-        refQuestionContent: '',
-        
-        aiOpen: false,
-        userMsg: '',
-        chatHistory: [],
-        notify: { show: false, title: '', msg: '' },
-
-        async init() {
-            this.setupListeners();
-            await this.loadNote(this.noteId);
-        },
-
-        showToast(title, msg) {
-             this.notify.title = title; this.notify.msg = msg; this.notify.show = true;
-             setTimeout(() => this.notify.show = false, 2000);
-        },
-
-        async loadNote(id) {
-            this.noteId = id;
-            const res = await fetch(`/api/notes/view?id=${id}`);
-            this.viewData = await res.json();
-            if (this.viewData.info.type === 'file') {
-                this.editorContent = this.viewData.content || '';
-                this.renderMarkdown();
-                this.viewMode = 'read';
-            }
-        },
-
-        setViewMode(mode) {
-            this.viewMode = mode;
-            if (mode !== 'read') this.$nextTick(() => { if(this.$refs.editorInput) this.$refs.editorInput.focus(); });
-            else this.saveNote();
-        },
-
-        renderMarkdown() {
-            if (!this.editorContent) { this.renderedContent = '<span class="opacity-30 italic">Empty note...</span>'; return; }
-            let html = marked.parse(this.editorContent);
-            html = html.replace(/\[\[(.*?)\]\]/g, (match, id) => {
-                return `<button class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 text-xs font-bold hover:underline cursor-pointer transition-colors select-none" onclick="document.dispatchEvent(new CustomEvent('open-ref', {detail: '${id.trim()}'}))"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>${id.trim()}</button>`;
-            });
-            this.renderedContent = html;
-            this.$nextTick(() => { if(window.MathJax) MathJax.typesetPromise(); });
-        },
-
-        insertText(prefix, suffix = '') {
-            const el = this.$refs.editorInput;
-            if (!el) return;
-            const start = el.selectionStart;
-            const end = el.selectionEnd;
-            const text = this.editorContent;
-            this.editorContent = text.substring(0, start) + prefix + text.substring(start, end) + suffix + text.substring(end, text.length);
-            this.renderMarkdown();
-            this.$nextTick(() => { el.focus(); el.setSelectionRange(start + prefix.length, end + prefix.length); });
-        },
-
-        // --- Picker Navigation ---
-        async openQuestionPicker() {
-            await this.loadPickerData('root');
-            this.showQuestionPicker = true;
-        },
-        
-        async loadPickerData(bookId) {
-            try {
-                const res = await fetch(`/api/book_details?book=${bookId}`);
-                const data = await res.json();
-                // Mapping backend format to what picker expects
-                this.pickerData = {
-                    sub_notebooks: data.sub_notebooks || [],
-                    questions: data.questions || [],
-                    breadcrumbs: data.breadcrumbs || []
-                };
-            } catch(e) { console.error(e); }
-        },
-
-        insertQuestionRef(qid) {
-            this.insertText(`[[${qid}]]`);
-            this.showQuestionPicker = false;
-            // Auto-switch to edit mode to see the code? No, stay in current mode.
-            if(this.viewMode === 'read') this.renderMarkdown(); 
-        },
-
-        setupListeners() {
-            document.addEventListener('open-ref', async (e) => {
-                const qid = e.detail;
-                const res = await fetch(`/api/get_question?q_id=${qid}`);
-                const data = await res.json();
-                if (data.error) this.showToast("Error", "Question not found");
-                else {
-                    this.refQuestionContent = data.content;
-                    this.showRefModal = true;
-                    this.$nextTick(() => { if(window.MathJax) MathJax.typesetPromise(); });
-                }
-            });
-        },
-        
-        handleLinkClick(e) { /* Handled by global listener */ },
-
-        createItem() {
-            if(!this.newItemName.trim()) return;
-            let parentId = this.noteId;
-            if (this.viewData.info.type === 'file') {
-                 const crumbs = this.viewData.breadcrumbs;
-                 if (crumbs.length >= 2) parentId = crumbs[crumbs.length - 2].id;
-                 else parentId = 'root';
-            }
-            fetch('/api/notes/create', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ name: this.newItemName, type: this.newItemType, parent: parentId }) })
-            .then(r=>r.json()).then(d => {
-                if(d.success) { this.showCreateModal = false; this.newItemName = ''; this.loadNote(this.noteId); this.showToast("Success", "Created successfully"); } else alert(d.msg);
-            });
-        },
-
-        saveNote() {
-            fetch('/api/notes/save', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id: this.noteId, content: this.editorContent }) })
-            .then(r=>r.json()).then(d => { if(d.success) this.showToast("Saved", "Note saved!"); });
-        },
-
+        // ... (Helpers: getOptionClass, toggleAI, etc. keep unchanged) ...
+        getOptionClass(id) { let base = 'backdrop-blur-md shadow-sm transition-all duration-200 cursor-pointer overflow-hidden border border-transparent hover:scale-[1.01] active:scale-[0.99] '; let theme = 'bg-white/70 hover:bg-white/90 dark:bg-black/20 dark:hover:bg-white/5 dark:border-gray-700 '; if (this.selectedOption === id && !this.submitted) return 'bg-blue-500/10 border-blue-500 text-blue-700 dark:text-blue-400 ring-1 ring-blue-500 shadow-md ' + base; if (this.submitted) { if (id === this.feedback.correct_id) return 'bg-green-500/20 border-green-500 text-green-800 dark:text-green-400 ' + base; if (id === this.selectedOption) return 'bg-red-500/20 border-red-500 text-red-800 dark:text-red-400 ' + base; return theme + 'opacity-40 grayscale ' + base; } return theme + base; },
+        getOptionCircleClass(id) { if (this.selectedOption === id && !this.submitted) return 'border-blue-500 text-blue-500 bg-transparent'; if (this.submitted && id === this.feedback.correct_id) return 'border-green-500 bg-green-500 text-white'; if (this.submitted && id === this.selectedOption) return 'border-red-500 bg-red-500 text-white'; return 'border-gray-300 dark:border-gray-600 text-gray-400'; },
+        async openAddToBookModal() { const res = await fetch('/api/get_notebooks'); this.notebooksList = await res.json(); this.showAddToBookModal = true; },
+        async addToBook(targetBookId) { const res = await fetch('/api/add_to_book', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ book_id: targetBookId, q_id: this.question.id }) }); const data = await res.json(); if(data.success) { this.showAddToBookModal = false; this.showToast('toast_saved', 'toast_added'); } else { alert("Failed."); } },
+        createSubBook() { this.subBookName = ''; this.subBookTags = ''; this.showCreateModal = true; },
+        async confirmCreateSubBook() { if (!this.subBookName.trim()) return; const res = await fetch('/api/create_book', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ name: this.subBookName, parent: this.bookId, tags: this.subBookTags }) }); const data = await res.json(); if (data.success) { this.showCreateModal = false; this.loadBook(this.bookId); this.showToast('toast_success', 'toast_folder_created'); } else alert(data.msg); },
         toggleAI() { this.aiOpen = !this.aiOpen; },
-        async sendMessage() {
-            if(!this.userMsg.trim()) return;
-            const txt = this.userMsg; this.userMsg = '';
-            this.chatHistory.push({ role: 'user', text: txt });
-            const context = { note_content: this.editorContent };
-            const res = await fetch('/api/ai_chat', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ message: txt, context: context }) });
-            const data = await res.json();
-            this.chatHistory.push({ role: 'ai', text: data.reply });
-        }
+        selectOption(id) { if(!this.submitted) this.selectedOption = id; },
+        async sendMessage() { if(!this.userMsg.trim()) return; const txt = this.userMsg; this.userMsg = ''; this.chatHistory.push({ role: 'user', text: txt }); const res = await fetch('/api/ai_chat', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ message: txt, context: this.question.ai_context }) }); const data = await res.json(); this.chatHistory.push({ role: 'ai', text: data.reply }); }
     }));
-    // --- 7. Notes App (Fixes: LaTeX, Modal UX) ---
+
+    // --- 7. Notes App (Ultimate Edition) ---
     Alpine.data('notesApp', (initialId) => ({
         noteId: initialId,
-        viewData: { info: {}, items: [], breadcrumbs: [] },
+        viewData: { info: {}, items: [], breadcrumbs: [], backlinks: [] },
         editorContent: '',
         renderedContent: '',
         viewMode: 'read', 
         
+        // UI States
         showCreateModal: false,
         newItemName: '',
         newItemType: 'file',
         
+        // Context Menu States
+        ctxMenu: { show: false, x: 0, y: 0, item: null, type: 'item' }, 
+        
+        // Modals: Rename & Move
+        renameModal: { show: false, name: '' },
+        moveModal: { show: false, currentPath: [], items: [] },
+        
+        // Note Link Picker (For [[note:id]])
+        showNotePicker: false,
+        noteSearchQuery: '',
+        noteSearchResults: [],
+        
+        // Auto Save & Notification
+        saveTimer: null,
+        lastSavedContent: '',
+        showAutoSaveNotify: false,
+        saveNotifyText: 'Auto Saved', 
+        
+        // Drag & Drop
+        dragSourceIndex: null,
+        
+        // Question Import / Picker
         showQuestionPicker: false,
+        pickerData: { sub_notebooks: [], questions: [], breadcrumbs: [] }, 
         questionSearchQuery: '',
         allQuestionsList: [],
         
-        // Reference Modal State
+        // Reference Modal (Embedded Question Preview)
         showRefModal: false,
         refQuestion: {},
         refFeedback: {},
         refSelected: null,
         refSubmitted: false,
-        refShowExplanation: false, // [NEW] 控制解析显示
+        refShowExplanation: false, 
         
+        // Caches
         questionCache: {}, 
+        noteCache: {}, // Cache for Note Names
+        
+        // AI
         aiOpen: false,
         userMsg: '',
         chatHistory: [],
@@ -767,6 +749,20 @@ document.addEventListener('alpine:init', () => {
 
         async init() {
             this.setupListeners();
+            // 全局点击关闭右键菜单
+            document.addEventListener('click', () => this.ctxMenu.show = false);
+            
+            // 监听内容变化 -> 自动保存
+            this.$watch('editorContent', (val) => {
+                if (this.viewData.info.type === 'file' && val !== this.lastSavedContent) {
+                    clearTimeout(this.saveTimer);
+                    this.saveTimer = setTimeout(() => this.saveNote(true), 2000); 
+                }
+            });
+            
+            // 监听笔记搜索输入
+            this.$watch('noteSearchQuery', (val) => this.searchNotes(val));
+            
             await this.loadNote(this.noteId);
         },
 
@@ -775,209 +771,381 @@ document.addEventListener('alpine:init', () => {
              setTimeout(() => this.notify.show = false, 2000);
         },
 
+        // 触发左下角绿色呼吸卡片
+        triggerAutoSaveNotify(text = 'Auto Saved') {
+            this.saveNotifyText = text;
+            this.showAutoSaveNotify = false;
+            this.$nextTick(() => this.showAutoSaveNotify = true);
+            setTimeout(() => this.showAutoSaveNotify = false, 2500); 
+        },
+
         async loadNote(id) {
             this.noteId = id;
             const res = await fetch(`/api/notes/view?id=${id}`);
             this.viewData = await res.json();
             if (this.viewData.info.type === 'file') {
                 this.editorContent = this.viewData.content || '';
+                this.lastSavedContent = this.editorContent;
                 this.renderMarkdown();
                 this.viewMode = 'read';
             }
         },
 
-        setViewMode(mode) {
-            this.viewMode = mode;
-            if (mode !== 'read') this.$nextTick(() => { if(this.$refs.editorInput) this.$refs.editorInput.focus(); });
-            else this.saveNote();
+        // --- Note Linking Logic ---
+        openNotePicker() {
+            this.noteSearchQuery = '';
+            this.noteSearchResults = [];
+            this.showNotePicker = true;
+            this.searchNotes(''); // Load defaults
+        },
+        async searchNotes(q) {
+            const res = await fetch(`/api/notes/search?q=${encodeURIComponent(q)}`);
+            this.noteSearchResults = await res.json();
+        },
+        insertNoteLink(note) {
+            this.insertText(`[[note:${note.id}]]`);
+            this.showNotePicker = false;
+            this.noteCache[note.id] = note.name; // Pre-cache name
         },
 
-        // --- 渲染逻辑优化：无缝加载 ---
-        renderMarkdown() {
+        // --- Question Picker / Import Logic ---
+        async openQuestionPicker() {
+            await this.loadPickerData('root');
+            this.showQuestionPicker = true;
+        },
+        async loadPickerData(bookId) {
+            try {
+                const res = await fetch(`/api/book_details?book=${bookId}`);
+                const data = await res.json();
+                this.pickerData = {
+                    sub_notebooks: data.sub_notebooks || [],
+                    questions: data.questions || [],
+                    breadcrumbs: data.breadcrumbs || []
+                };
+            } catch(e) { 
+                console.error("Import load failed:", e); 
+                this.pickerData = { sub_notebooks: [], questions: [], breadcrumbs: [] };
+            }
+        },
+        insertQuestionRef(qid) {
+            this.insertText(`[[${qid}]]`);
+            this.showQuestionPicker = false;
+        },
+
+        // --- Save Logic ---
+        async saveNote(isAuto = false) {
+            if(!this.editorContent) return;
+            fetch('/api/notes/save', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id: this.noteId, content: this.editorContent }) })
+            .then(r=>r.json()).then(d => { 
+                if(d.success) {
+                    this.lastSavedContent = this.editorContent;
+                    if (isAuto) this.triggerAutoSaveNotify("Auto Saved");
+                    else this.triggerAutoSaveNotify("Saved Successfully");
+                }
+            });
+        },
+
+        // --- Drag & Drop Logic ---
+        handleDragStart(e, index) {
+            this.dragSourceIndex = index;
+            e.dataTransfer.effectAllowed = 'move';
+            e.target.classList.add('dragging');
+        },
+        handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+            this.viewData.items.forEach((_, i) => {
+                const el = document.getElementById(`note-item-${i}`);
+                if(el) el.classList.remove('drag-over');
+            });
+        },
+        handleDragOver(e, index) {
+            e.preventDefault();
+            const el = document.getElementById(`note-item-${index}`);
+            if(el) el.classList.add('drag-over');
+        },
+        handleDragLeave(e, index) {
+            const el = document.getElementById(`note-item-${index}`);
+            if(el) el.classList.remove('drag-over');
+        },
+        async handleDrop(e, targetIndex) {
+            e.preventDefault();
+            this.handleDragEnd(e);
+            if (this.dragSourceIndex === null || this.dragSourceIndex === targetIndex) return;
+
+            // 1. Optimistic UI update
+            const items = this.viewData.items;
+            const [movedItem] = items.splice(this.dragSourceIndex, 1);
+            items.splice(targetIndex, 0, movedItem);
+            this.viewData.items = items;
+
+            // 2. Backend Sync
+            const parentId = this.viewData.breadcrumbs.length > 1 
+                ? this.viewData.breadcrumbs[this.viewData.breadcrumbs.length - 2].id 
+                : 'root';
+            const newOrder = items.map(i => i.id);
+            
+            await fetch('/api/notes/reorder', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ parent_id: parentId, new_order: newOrder })
+            });
+        },
+
+        // --- Context Menu Logic ---
+        handleContextMenu(e, item) {
+            this.ctxMenu.item = item;
+            this.ctxMenu.type = 'item';
+            this.ctxMenu.x = e.clientX;
+            this.ctxMenu.y = e.clientY;
+            this.ctxMenu.show = true;
+        },
+        handleBlankContextMenu(e) {
+            this.ctxMenu.item = null;
+            this.ctxMenu.type = 'blank';
+            this.ctxMenu.x = e.clientX;
+            this.ctxMenu.y = e.clientY;
+            this.ctxMenu.show = true;
+        },
+
+        // --- Sorting Logic ---
+        async sortItems(sortBy) {
+            const parentId = this.viewData.breadcrumbs.length > 1 
+                ? this.viewData.breadcrumbs[this.viewData.breadcrumbs.length - 2].id 
+                : 'root';
+            
+            const res = await fetch('/api/notes/sort', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ parent_id: parentId, sort_by: sortBy })
+            });
+            
+            if ((await res.json()).success) {
+                this.showToast("Sorted", `Sorted by ${sortBy}`);
+                this.loadNote(this.noteId); 
+            }
+        },
+
+        // --- Edit & Rename Logic ---
+        async updateTitle(e) {
+            const newTitle = e.target.value;
+            if (!newTitle.trim()) return;
+            
+            const res = await fetch('/api/notes/rename', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ id: this.viewData.info.id, name: newTitle }) 
+            });
+            
+            const d = await res.json();
+            if(d.success) {
+                this.viewData.info.name = newTitle; 
+                const listItem = this.viewData.items.find(i => i.id === this.viewData.info.id);
+                if (listItem) listItem.name = newTitle;
+                const crumb = this.viewData.breadcrumbs.find(c => c.id === this.viewData.info.id);
+                if (crumb) crumb.name = newTitle;
+                this.triggerAutoSaveNotify("Title Updated");
+            }
+        },
+        
+        openRenameModal() { 
+            this.renameModal.name = this.ctxMenu.item.name; 
+            this.renameModal.show = true; 
+            this.ctxMenu.show = false; 
+        },
+        async confirmRename() { 
+            if (!this.renameModal.name.trim()) return; 
+            const res = await fetch('/api/notes/rename', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ id: this.ctxMenu.item.id, name: this.renameModal.name }) 
+            }); 
+            if((await res.json()).success) { 
+                this.showToast("Success", "Renamed"); 
+                this.renameModal.show = false; 
+                this.loadNote(this.noteId); 
+            } 
+        },
+        
+        // --- Delete Logic ---
+        async deleteItem() { 
+            if(!confirm(`Delete "${this.ctxMenu.item.name}"?`)) return; 
+            const res = await fetch('/api/notes/delete', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ id: this.ctxMenu.item.id }) 
+            }); 
+            if((await res.json()).success) { 
+                this.ctxMenu.show = false; 
+                // Return to parent if current file deleted
+                if (this.ctxMenu.item.id === this.noteId) {
+                    this.loadNote(this.viewData.breadcrumbs.length > 1 ? this.viewData.breadcrumbs[this.viewData.breadcrumbs.length-2].id : 'root'); 
+                } else {
+                    this.loadNote(this.noteId); 
+                }
+            } 
+        },
+        
+        // --- Move Logic ---
+        async openMoveModal(targetId = 'root') { 
+            this.ctxMenu.show = false; 
+            this.moveModal.show = true; 
+            await this.loadMovePicker(targetId); 
+        },
+        async loadMovePicker(folderId) { 
+            const res = await fetch(`/api/notes/view?id=${folderId}`); 
+            const data = await res.json(); 
+            this.moveModal.items = data.items.filter(i => i.type === 'folder'); 
+            this.moveModal.currentPath = data.breadcrumbs; 
+            this.moveModal.targetId = folderId; 
+        },
+        async confirmMove() { 
+            if (this.moveModal.targetId === this.ctxMenu.item.id) return; 
+            const res = await fetch('/api/notes/move', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ id: this.ctxMenu.item.id, parent: this.moveModal.targetId }) 
+            }); 
+            if((await res.json()).success) { 
+                this.showToast("Moved", "Success"); 
+                this.moveModal.show = false; 
+                this.loadNote(this.noteId); 
+            } 
+        },
+        
+        createItem() {
+            if(!this.newItemName.trim()) return;
+            let parentId = 'root';
+            if (this.viewData.breadcrumbs.length > 1) {
+                parentId = this.viewData.breadcrumbs[this.viewData.breadcrumbs.length - 2].id;
+            } else if (this.viewData.info.type === 'folder') {
+                parentId = this.viewData.info.id;
+            }
+            fetch('/api/notes/create', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ name: this.newItemName, type: this.newItemType, parent: parentId }) 
+            })
+            .then(r=>r.json()).then(d => { 
+                if(d.success) { 
+                    this.showCreateModal = false; 
+                    this.newItemName = ''; 
+                    this.loadNote(this.noteId); 
+                    this.showToast("Success", "Created"); 
+                } else alert(d.msg); 
+            });
+        },
+
+        // --- Rendering Engine (Markdown + Links) ---
+        setViewMode(mode) { 
+            this.viewMode = mode; 
+            if (mode !== 'read') {
+                this.$nextTick(() => { if(this.$refs.editorInput) this.$refs.editorInput.focus(); }); 
+            } else {
+                this.saveNote(); 
+            }
+        },
+        
+        renderMarkdown() { 
             if (!this.editorContent) { 
                 this.renderedContent = '<span class="opacity-30 italic">Empty note...</span>'; 
                 return; 
-            }
+            } 
+            let html = marked.parse(this.editorContent); 
             
-            let html = marked.parse(this.editorContent);
-            
-            // 替换 [[id]]
-            html = html.replace(/\[\[(.*?)\]\]/g, (match, id) => {
-                const qid = id.trim();
-                const qData = this.questionCache[qid];
-                
-                // [优化] 如果缓存里有，直接渲染卡片！不再显示占位符！
-                if (qData && !qData.error) {
-                    // 直接调用卡片生成 HTML (Inline)
-                    return `
-                        <div class="group relative my-6 rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#151515] hover:border-blue-400 dark:hover:border-blue-500/50 transition-all duration-300 cursor-pointer shadow-sm hover:shadow-xl overflow-hidden"
-                             onclick="document.dispatchEvent(new CustomEvent('open-ref', {detail: '${qid}'}))">
-                            <div class="px-6 py-3 border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 flex justify-between items-center">
-                                <div class="flex items-center gap-2">
-                                    <span class="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 text-xs font-bold uppercase tracking-wider">${qid}</span>
-                                    <div class="flex gap-1">
-                                        ${(qData.tags || []).map(t => `<span class="text-[10px] opacity-50 font-mono">#${t}</span>`).join('')}
-                                    </div>
-                                </div>
-                                <div class="text-xs font-bold text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity">Practice</div>
-                            </div>
-                            <div class="p-6 prose prose-sm dark:prose-invert max-w-none math-content leading-loose">
-                                ${qData.content}
-                            </div>
-                        </div>
-                    `;
+            // 1. Render Note Links [[note:id]]
+            html = html.replace(/\[\[note:(.*?)\]\]/g, (match, id) => {
+                const nid = id.trim();
+                const name = this.noteCache[nid];
+                if (name) {
+                    return `<button onclick="document.dispatchEvent(new CustomEvent('load-note', {detail: '${nid}'}))" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-blue-100 dark:bg-blue-500/30 text-blue-700 dark:text-blue-200 text-sm font-bold hover:bg-blue-200 dark:hover:bg-blue-500/50 transition-colors cursor-pointer align-baseline transform hover:-translate-y-0.5"><svg class="w-3 h-3 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>${name}</button>`;
                 } else {
-                    // 缓存没有，才显示占位符 (Pending)
-                    return `<div class="question-embed-placeholder my-6" data-qid="${qid}">
-                                <div class="flex items-center justify-center p-6 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10">
-                                    <div class="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mr-2"></div>
-                                    <span class="text-xs opacity-50 font-mono">Loading ${qid}...</span>
-                                </div>
-                            </div>`;
+                    return `<span class="note-link-placeholder opacity-50 bg-gray-100 dark:bg-white/10 px-1 rounded text-xs" data-nid="${nid}">Loading...</span>`;
                 }
             });
+
+            // 2. Render Question Links [[id]]
+            html = html.replace(/\[\[(?!note:)(.*?)\]\]/g, (match, id) => { 
+                const qid = id.trim(); 
+                const qData = this.questionCache[qid]; 
+                if (qData && !qData.error) { 
+                    return `<div class="group relative my-6 rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#151515] hover:border-blue-400 dark:hover:border-blue-500/50 transition-all duration-300 cursor-pointer shadow-sm hover:shadow-xl overflow-hidden" onclick="document.dispatchEvent(new CustomEvent('open-ref', {detail: '${qid}'}))">
+                                <div class="px-6 py-3 border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 flex justify-between items-center">
+                                    <div class="flex items-center gap-2">
+                                        <span class="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 text-xs font-bold uppercase tracking-wider">${qid}</span>
+                                        <div class="flex gap-1">${(qData.tags || []).map(t => `<span class="text-[10px] opacity-50 font-mono">#${t}</span>`).join('')}</div>
+                                    </div>
+                                    <div class="text-xs font-bold text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity">Practice</div>
+                                </div>
+                                <div class="p-6 prose prose-sm dark:prose-invert max-w-none math-content leading-loose">${qData.content}</div>
+                            </div>`; 
+                } else { 
+                    return `<div class="question-embed-placeholder my-6" data-qid="${qid}"><div class="flex items-center justify-center p-6 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10"><div class="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mr-2"></div><span class="text-xs opacity-50 font-mono">Loading ${qid}...</span></div></div>`; 
+                } 
+            }); 
+
+            this.renderedContent = html; 
             
-            this.renderedContent = html;
-            
-            // 异步补充那些不在缓存里的题目
             this.$nextTick(async () => { 
-                await this.updateQuestionEmbeds();
+                await this.updateNoteLinks(); 
+                await this.updateQuestionEmbeds(); 
                 if(window.MathJax) MathJax.typesetPromise(); 
-            });
+            }); 
         },
-
-        async updateQuestionEmbeds() {
-            const Placeholders = document.querySelectorAll('.question-embed-placeholder');
+        
+        async updateNoteLinks() {
+            const Placeholders = document.querySelectorAll('.note-link-placeholder');
             if (Placeholders.length === 0) return;
-
             const promises = Array.from(Placeholders).map(async (el) => {
-                const qid = el.dataset.qid;
-                
-                // 双重检查，防止重复请求
-                if (this.questionCache[qid]) return; 
-
+                const nid = el.dataset.nid;
+                if (this.noteCache[nid]) return; 
                 try {
-                    const res = await fetch(`/api/get_question?q_id=${qid}`);
-                    const qData = await res.json();
-                    if (!qData.error) {
-                        this.questionCache[qid] = qData;
-                        // 数据拿到后，重新渲染整个 Markdown 即可
-                        // 这样比手动替换 outerHTML 更安全，且利用了上面的缓存优先逻辑
-                        this.renderMarkdown();
+                    const res = await fetch(`/api/notes/info?id=${nid}`);
+                    const data = await res.json();
+                    if (!data.error) {
+                        this.noteCache[nid] = data.name;
+                        this.renderMarkdown(); 
                     } else {
-                        el.innerHTML = `<span class="text-red-500 text-xs">Error: ${qid}</span>`;
+                        el.innerHTML = `<span class="text-red-500 text-xs line-through">Deleted</span>`;
                     }
                 } catch(e) {}
             });
-
             await Promise.all(promises);
         },
-
-        setupListeners() {
-            document.addEventListener('open-ref', async (e) => {
-                const qid = e.detail;
-                await this.openRefModal(qid);
-            });
-        },
-
-        async openRefModal(qid) {
-            // 重置状态
-            this.refSelected = null;
-            this.refSubmitted = false;
-            this.refFeedback = {};
-            this.refShowExplanation = false; // 默认不显示解析
-            
-            let qData = this.questionCache[qid];
-            if(!qData) {
-                const res = await fetch(`/api/get_question?q_id=${qid}`);
-                qData = await res.json();
-                this.questionCache[qid] = qData;
-            }
-            
-            if (qData.error) {
-                this.showToast("Error", "Question not found");
-            } else {
-                this.refQuestion = qData;
-                this.showRefModal = true;
-                // 弹窗打开后，渲染里面的公式
-                this.$nextTick(() => { if(window.MathJax) MathJax.typesetPromise(); });
-            }
-        },
-
-        selectRefOption(id) { 
-            if(!this.refSubmitted) this.refSelected = id; 
+        
+        async updateQuestionEmbeds() { 
+            const Placeholders = document.querySelectorAll('.question-embed-placeholder'); 
+            if (Placeholders.length === 0) return; 
+            const promises = Array.from(Placeholders).map(async (el) => { 
+                const qid = el.dataset.qid; 
+                if (this.questionCache[qid]) return; 
+                try { 
+                    const res = await fetch(`/api/get_question?q_id=${qid}`); 
+                    const qData = await res.json(); 
+                    if (!qData.error) { 
+                        this.questionCache[qid] = qData; 
+                        this.renderMarkdown(); 
+                    } else { 
+                        el.innerHTML = `<span class="text-red-500 text-xs">Error: ${qid}</span>`; 
+                    } 
+                } catch(e) {} 
+            }); 
+            await Promise.all(promises); 
         },
         
-        async submitRef() {
-            if(!this.refSelected) return;
-            const res = await fetch('/api/submit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ q_id: this.refQuestion.id, choice: this.refSelected }) });
-            this.refFeedback = await res.json();
-            this.refSubmitted = true;
-            this.refShowExplanation = true; // 提交后自动展开解析（可选，也可保持折叠）
-            // 渲染解析里的公式
-            this.$nextTick(() => { if(window.MathJax) MathJax.typesetPromise(); });
+        setupListeners() { 
+            document.addEventListener('open-ref', async (e) => { await this.openRefModal(e.detail); }); 
+            document.addEventListener('load-note', async (e) => { await this.loadNote(e.detail); }); 
         },
+
+        // ... (Reference Modal Logic Keep Unchanged) ...
+        async openRefModal(qid) { this.refSelected = null; this.refSubmitted = false; this.refFeedback = {}; this.refShowExplanation = false; let qData = this.questionCache[qid]; if(!qData) { const res = await fetch(`/api/get_question?q_id=${qid}`); qData = await res.json(); this.questionCache[qid] = qData; } if (qData.error) { this.showToast("Error", "Question not found"); } else { this.refQuestion = qData; this.showRefModal = true; this.$nextTick(() => { if(window.MathJax) MathJax.typesetPromise(); }); } },
+        selectRefOption(id) { if(!this.refSubmitted) this.refSelected = id; },
+        async submitRef() { if(!this.refSelected) return; const res = await fetch('/api/submit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ q_id: this.refQuestion.id, choice: this.refSelected }) }); this.refFeedback = await res.json(); this.refSubmitted = true; this.refShowExplanation = true; this.$nextTick(() => { if(window.MathJax) MathJax.typesetPromise(); }); },
+        getRefOptionClass(id) { let base = 'group relative p-4 pl-16 rounded-xl transition-all cursor-pointer border '; if (this.refSelected === id && !this.refSubmitted) return base + 'bg-blue-500/10 border-blue-500 text-blue-600 ring-1 ring-blue-500'; if (this.refSubmitted) { if (id === this.refFeedback.correct_id) return base + 'bg-green-500/20 border-green-500 text-green-700'; if (id === this.refSelected) return base + 'bg-red-500/20 border-red-500 text-red-700'; return base + 'opacity-40 grayscale border-transparent'; } return base + 'border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5'; },
         
-        getRefOptionClass(id) {
-            let base = 'group relative p-4 pl-16 rounded-xl transition-all cursor-pointer border ';
-            if (this.refSelected === id && !this.refSubmitted) return base + 'bg-blue-500/10 border-blue-500 text-blue-600 ring-1 ring-blue-500';
-            if (this.refSubmitted) {
-                if (id === this.refFeedback.correct_id) return base + 'bg-green-500/20 border-green-500 text-green-700';
-                if (id === this.refSelected) return base + 'bg-red-500/20 border-red-500 text-red-700';
-                return base + 'opacity-40 grayscale border-transparent';
-            }
-            return base + 'border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5';
-        },
-        
-        // ... (其余函数保持不变) ...
-        insertText(prefix, suffix = '') {
-            const el = this.$refs.editorInput;
-            if (!el) return;
-            const start = el.selectionStart; const end = el.selectionEnd;
-            const text = this.editorContent;
-            this.editorContent = text.substring(0, start) + prefix + text.substring(start, end) + suffix + text.substring(end, text.length);
-            this.renderMarkdown();
-            this.$nextTick(() => { el.focus(); el.setSelectionRange(start + prefix.length, end + prefix.length); });
-        },
-        async openQuestionPicker() {
-            if (this.allQuestionsList.length === 0) {
-                const res = await fetch(`/api/book_details?book=root`);
-                const data = await res.json();
-                this.allQuestionsList = data.questions || []; 
-            }
-            this.showQuestionPicker = true;
-        },
-        get filteredQuestions() {
-            if (!this.questionSearchQuery) return this.allQuestionsList.slice(0, 10);
-            const q = this.questionSearchQuery.toLowerCase();
-            return this.allQuestionsList.filter(item => (item.summary || '').toLowerCase().includes(q) || item.id.toLowerCase().includes(q)).slice(0, 20);
-        },
-        insertQuestionRef(qid) { this.insertText(`[[${qid}]]`); this.showQuestionPicker = false; },
-        createItem() {
-            if(!this.newItemName.trim()) return;
-            let parentId = this.noteId;
-            if (this.viewData.info.type === 'file') {
-                 const crumbs = this.viewData.breadcrumbs;
-                 if (crumbs.length >= 2) parentId = crumbs[crumbs.length - 2].id; else parentId = 'root';
-            }
-            fetch('/api/notes/create', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ name: this.newItemName, type: this.newItemType, parent: parentId }) })
-            .then(r=>r.json()).then(d => {
-                if(d.success) { this.showCreateModal = false; this.newItemName = ''; this.loadNote(this.noteId); this.showToast("Success", "Created successfully"); } else alert(d.msg);
-            });
-        },
-        saveNote() {
-            fetch('/api/notes/save', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id: this.noteId, content: this.editorContent }) })
-            .then(r=>r.json()).then(d => { if(d.success) this.showToast("Saved", "Note saved!"); });
-        },
+        // --- Helpers ---
+        insertText(prefix, suffix = '') { const el = this.$refs.editorInput; if (!el) return; const start = el.selectionStart; const end = el.selectionEnd; const text = this.editorContent; this.editorContent = text.substring(0, start) + prefix + text.substring(start, end) + suffix + text.substring(end, text.length); this.renderMarkdown(); this.$nextTick(() => { el.focus(); el.setSelectionRange(start + prefix.length, end + prefix.length); }); },
         toggleAI() { this.aiOpen = !this.aiOpen; },
-        async sendMessage() {
-            if(!this.userMsg.trim()) return;
-            const txt = this.userMsg; this.userMsg = '';
-            this.chatHistory.push({ role: 'user', text: txt });
-            const context = { note_content: this.editorContent };
-            const res = await fetch('/api/ai_chat', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ message: txt, context: context }) });
-            const data = await res.json();
-            this.chatHistory.push({ role: 'ai', text: data.reply });
-        }
+        async sendMessage() { if(!this.userMsg.trim()) return; const txt = this.userMsg; this.userMsg = ''; this.chatHistory.push({ role: 'user', text: txt }); const context = { note_content: this.editorContent }; const res = await fetch('/api/ai_chat', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ message: txt, context: context }) }); const data = await res.json(); this.chatHistory.push({ role: 'ai', text: data.reply }); }
     }));
 });

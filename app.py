@@ -113,5 +113,78 @@ def api_notes_save():
     if service.save_note_content(note_id, content): return jsonify({"success": True})
     return jsonify({"success": False, "msg": "Failed"})
 
+@app.route('/api/notes/rename', methods=['POST'])
+def api_notes_rename():
+    data = request.json
+    if service.rename_note_item(data.get('id'), data.get('name')): return jsonify({"success": True})
+    return jsonify({"success": False, "msg": "Failed"})
+
+@app.route('/api/notes/delete', methods=['POST'])
+def api_notes_delete():
+    data = request.json
+    if service.delete_note_item(data.get('id')): return jsonify({"success": True})
+    return jsonify({"success": False, "msg": "Failed"})
+
+@app.route('/api/notes/move', methods=['POST'])
+def api_notes_move():
+    data = request.json
+    if service.move_note_item(data.get('id'), data.get('parent')): return jsonify({"success": True})
+    return jsonify({"success": False, "msg": "Failed"})
+
+@app.route('/api/notes/reorder', methods=['POST'])
+def api_notes_reorder():
+    data = request.json
+    if service.reorder_note_children(data.get('parent_id'), data.get('new_order')): return jsonify({"success": True})
+    return jsonify({"success": False})
+
+@app.route('/api/notes/sort', methods=['POST'])
+def api_notes_sort():
+    data = request.json
+    if service.sort_note_children(data.get('parent_id'), data.get('sort_by')): return jsonify({"success": True})
+    return jsonify({"success": False})
+
+@app.route('/api/notes/search', methods=['GET'])
+def api_notes_search():
+    query = request.args.get('q', '')
+    return jsonify(service.search_notes(query))
+
+@app.route('/api/notes/info', methods=['GET'])
+def api_note_info():
+    # 简单的获取单个笔记信息的接口，用于前端渲染链接标题
+    note_id = request.args.get('id')
+    note = service.user_data['notes'].get(note_id)
+    if note:
+        return jsonify({"id": note['id'], "name": note['name']})
+    return jsonify({"error": "Not found"})
+
+@app.route('/api/notebooks/rename', methods=['POST'])
+def api_notebooks_rename():
+    data = request.json
+    if service.rename_notebook(data.get('id'), data.get('name')): return jsonify({"success": True})
+    return jsonify({"success": False, "msg": "Failed"})
+
+@app.route('/api/notebooks/delete', methods=['POST'])
+def api_notebooks_delete():
+    data = request.json
+    if service.delete_notebook(data.get('id')): return jsonify({"success": True})
+    return jsonify({"success": False, "msg": "Failed"})
+
+@app.route('/api/notebooks/move', methods=['POST'])
+def api_notebooks_move():
+    data = request.json
+    if service.move_notebook(data.get('id'), data.get('parent')): return jsonify({"success": True})
+    return jsonify({"success": False, "msg": "Failed"})
+
+@app.route('/api/notebooks/reorder', methods=['POST'])
+def api_notebooks_reorder():
+    data = request.json
+    if service.reorder_notebook_content(data.get('id'), data.get('sub_order'), data.get('q_order')): return jsonify({"success": True})
+    return jsonify({"success": False})
+
+@app.route('/api/get_related_notes', methods=['GET'])
+def api_get_related_notes():
+    q_id = request.args.get('q_id')
+    return jsonify(service.find_notes_by_question(q_id))
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
